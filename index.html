@@ -97,15 +97,15 @@
   .message { display:flex;gap:10px;align-items:flex-end;animation:msgIn 0.25s ease;padding:2px 0; }
   .message.own { flex-direction:row-reverse; }
 
-  .msg-avatar-wrap { display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:50px; }
+  .msg-avatar-wrap { display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:64px; }
   .msg-avatar { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:2px solid transparent; }
   .msg-avatar.guest-style { background:linear-gradient(135deg,#374151,#6b7280);font-size:14px;color:white;font-family:'Syne',sans-serif;font-weight:700; }
-  .msg-avatar-name { font-size:10px;color:var(--text-muted);text-align:center;margin-top:3px;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600; }
+  .msg-avatar-name { font-size:12px;color:var(--text);text-align:center;margin-top:4px;max-width:60px;word-break:break-word;font-weight:700;line-height:1.2; }
 
   .msg-content { max-width:62%; }
   .msg-name { font-size:13px;color:var(--text);margin-bottom:5px;font-weight:700;letter-spacing:0.1px; }
   .message.own .msg-name { text-align:right; }
-  .msg-bubble { background:var(--surface2);border:1px solid var(--border);border-radius:18px 18px 18px 4px;padding:11px 15px;font-size:14px;line-height:1.5;color:var(--text);word-break:break-word; }
+  .msg-bubble { background:var(--surface2);border:1px solid var(--border);border-radius:18px 18px 18px 4px;padding:12px 16px;font-size:16px;line-height:1.6;color:var(--text);word-break:break-word; }
   .message.own .msg-bubble { border-radius:18px 18px 4px 18px; }
   .msg-bubble img { max-width:240px;max-height:280px;border-radius:10px;display:block;margin-top:4px;cursor:pointer; }
   .msg-bubble img:hover { opacity:0.9; }
@@ -147,7 +147,7 @@
 
   .input-box { display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:8px 8px 8px 16px;transition:border-color 0.2s; }
   .input-box:focus-within { border-color:var(--accent2); }
-  .input-box input { flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px; }
+  .input-box input { flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px; }
   .input-box input::placeholder { color:var(--text-muted); }
   .btn-send { background:var(--accent);border:none;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;flex-shrink:0; }
   .btn-send:hover { background:#d4ff20;transform:scale(1.05); }
@@ -286,7 +286,7 @@
         <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
         <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
         <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
-        <button class="emoji-tab" onclick="switchETab('gifs',this)" style="font-size:11px;font-weight:700">GIF</button>
+        <button class="emoji-tab" onclick="switchETab('gifs',this);loadTrendingGifs()" style="font-size:11px;font-weight:700">GIF</button>
       </div>
       <div class="emoji-grid" id="emojiGrid"></div>
       <div id="gifArea" style="display:none">
@@ -665,7 +665,7 @@ function buildEmojiGrid(tab){
     btn.onclick=()=>insertEmoji(em);grid.appendChild(btn);
   });
 }
-function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab); }
+function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab);if(tab==='gifs')loadTrendingGifs(); }
 function toggleEmoji(){
   const p=document.getElementById('emojiPanel');
   const open=p.classList.toggle('open');
@@ -684,6 +684,19 @@ document.addEventListener('click',e=>{
 });
 
 // GIF
+async function loadTrendingGifs(){
+  const grid=document.getElementById('gifGrid');
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Lade GIFs...</div>';
+  try{
+    const r=await fetch('https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCDA&limit=8&media_filter=gif&client_key=wg_treffpunkt');
+    const d=await r.json();
+    if(d.results&&d.results.length>0){ showGifs(d.results); }
+    else { grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Tippe etwas um GIFs zu suchen!</div>'; }
+  }catch(e){
+    grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Tippe etwas um GIFs zu suchen!</div>';
+  }
+}
+
 async function searchGifs(){
   const q=document.getElementById('gifSearch').value.trim();
   const grid=document.getElementById('gifGrid');
