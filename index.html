@@ -128,8 +128,9 @@
   .gif-search-row { display:flex;gap:8px;margin-bottom:8px; }
   .gif-search-row input { flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif; }
   .gif-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:5px; }
-  .gif-item { border-radius:8px;overflow:hidden;cursor:pointer;height:80px;background:var(--surface2); }
-  .gif-item img { width:100%;height:100%;object-fit:cover; }
+  .gif-item { border-radius:8px;overflow:hidden;cursor:pointer;height:70px;background:var(--surface2);position:relative; }
+  .gif-item img { width:100%;height:100%;object-fit:cover;display:block;pointer-events:none; }
+
   .gif-item:hover { opacity:0.8; }
 
   .input-toolbar { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
@@ -714,13 +715,24 @@ async function searchGifs(){
 }
 function showGifs(results){
   const grid=document.getElementById('gifGrid');grid.innerHTML='';
-  if(!results||!results.length){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Keine GIFs gefunden.</div>';return;}
+  if(!results||!results.length){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 3">Keine GIFs gefunden.</div>';return;}
   results.forEach(g=>{
     const url=g.images?.original?.url;
-    const prev=g.images?.fixed_height_small?.url||url;
+    const prev=g.images?.fixed_height_small?.url||g.images?.downsized_small?.url||url;
     if(!url)return;
-    const item=document.createElement('div');item.className='gif-item';
-    item.innerHTML=`<img src="${prev}" loading="lazy">`;item.onclick=()=>sendGif(url);grid.appendChild(item);
+    const item=document.createElement('div');
+    item.className='gif-item';
+    item.style.cursor='pointer';
+    const img=document.createElement('img');
+    img.src=prev;
+    img.loading='lazy';
+    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;pointer-events:none';
+    item.appendChild(img);
+    item.addEventListener('click',()=>{
+      document.getElementById('emojiPanel').classList.remove('open');
+      sendGif(url);
+    });
+    grid.appendChild(item);
   });
 }
 async function sendGif(url){
