@@ -594,8 +594,13 @@ function renderMsg(msg){
 
 function esc(t){ if(!t)return'';return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Session-Startzeit – nur Nachrichten ab jetzt laden
+const SESSION_START = new Date().toISOString();
+
 async function loadMessages(){
-  const {data,error}=await sb.from('messages').select('*').order('created_at',{ascending:true}).limit(100);
+  const {data,error}=await sb.from('messages').select('*')
+    .gte('created_at', SESSION_START)
+    .order('created_at',{ascending:true}).limit(100);
   if(error){ console.log('DB:',error.message);return; }
   const area=document.getElementById('messagesArea');
   if(data&&data.length>0){
