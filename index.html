@@ -675,7 +675,7 @@ function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>
 function toggleEmoji(){
   const p=document.getElementById('emojiPanel');
   const open=p.classList.toggle('open');
-  if(open&&!document.getElementById('emojiGrid').children.length) buildEmojiGrid('smileys');
+  if(open) buildEmojiGrid('smileys');
 }
 function insertEmoji(em){
   const inp=document.getElementById('msgInput');
