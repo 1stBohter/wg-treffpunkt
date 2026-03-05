@@ -684,38 +684,41 @@ document.addEventListener('click',e=>{
 });
 
 // GIF
+const GIPHY_KEY='4qqsaDpUzUenKubUbdFtGAtLrFj3RD5d';
+
 async function loadTrendingGifs(){
   const grid=document.getElementById('gifGrid');
   grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Lade GIFs...</div>';
   try{
-    const r=await fetch('https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCDA&limit=8&media_filter=gif&client_key=wg_treffpunkt');
+    const r=await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=8&rating=g`);
     const d=await r.json();
-    if(d.results&&d.results.length>0){ showGifs(d.results); }
-    else { grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Tippe etwas um GIFs zu suchen!</div>'; }
+    if(d.data&&d.data.length>0){ showGifs(d.data); }
+    else { grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Keine GIFs gefunden.</div>'; }
   }catch(e){
-    grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Tippe etwas um GIFs zu suchen!</div>';
+    grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">GIFs nicht verfügbar.</div>';
   }
 }
 
 async function searchGifs(){
   const q=document.getElementById('gifSearch').value.trim();
   const grid=document.getElementById('gifGrid');
-  if(!q){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Tippe etwas ein!</div>';return;}
+  if(!q){loadTrendingGifs();return;}
   clearTimeout(window._gt);
   window._gt=setTimeout(async()=>{
     grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Suche...</div>';
     try{
-      const r=await fetch(`https://tenor.googleapis.com/v2/search?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCDA&q=${encodeURIComponent(q)}&limit=8&media_filter=gif`);
-      const d=await r.json();showGifs(d.results||[]);
+      const r=await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(q)}&limit=8&rating=g`);
+      const d=await r.json();showGifs(d.data||[]);
     }catch(e){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">GIF-Suche nicht verfügbar.</div>';}
   },400);
 }
 function showGifs(results){
   const grid=document.getElementById('gifGrid');grid.innerHTML='';
-  if(!results.length){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Keine GIFs gefunden.</div>';return;}
+  if(!results||!results.length){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Keine GIFs gefunden.</div>';return;}
   results.forEach(g=>{
-    const url=g.media_formats?.gif?.url||g.media_formats?.tinygif?.url;
-    const prev=g.media_formats?.tinygif?.url||url;if(!url)return;
+    const url=g.images?.original?.url;
+    const prev=g.images?.fixed_height_small?.url||url;
+    if(!url)return;
     const item=document.createElement('div');item.className='gif-item';
     item.innerHTML=`<img src="${prev}" loading="lazy">`;item.onclick=()=>sendGif(url);grid.appendChild(item);
   });
