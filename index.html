@@ -663,15 +663,14 @@ function clearUpload(){ pendingFile=null;document.getElementById('uploadPreview'
 // EMOJI
 function buildEmojiGrid(tab){
   const grid=document.getElementById('emojiGrid');
-  const gifArea=document.getElementById('gifArea');
-  if(tab==='gifs'){grid.style.display='none';gifArea.style.display='block';return;}
-  grid.style.display='grid';gifArea.style.display='none';grid.innerHTML='';
+  grid.style.display='grid';
+  grid.innerHTML='';
   (EMOJIS[tab]||[]).forEach(em=>{
     const btn=document.createElement('button');btn.className='emoji-btn';btn.textContent=em;
     btn.onclick=()=>insertEmoji(em);grid.appendChild(btn);
   });
 }
-function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab);if(tab==='gifs')loadTrendingGifs(); }
+function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab); }
 function toggleEmoji(){
   const p=document.getElementById('emojiPanel');
   const open=p.classList.toggle('open');
