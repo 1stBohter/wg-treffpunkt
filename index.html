@@ -496,9 +496,11 @@ const SMILIES = [
 
 function parseSmilies(text){
   if(!text) return text;
+  // Split on smilie codes, escape text parts, replace codes with images
   let result = esc(text);
   SMILIES.forEach(s=>{
-    const regex = new RegExp(':'+s.code+'\\b','gi');
+    const escaped = ':'+s.code;
+    const regex = new RegExp(escaped+'(?=\\s|$|[^a-zA-Z0-9])','gi');
     result = result.replace(regex, `<img src="${s.url}" class="custom-smilie" title=":${s.code}" alt=":${s.code}">`);
   });
   return result;
@@ -755,9 +757,11 @@ function esc(t){ if(!t)return'';return t.replace(/&/g,'&amp;').replace(/</g,'&lt
 
 function parseSmilies(text){
   if(!text) return text;
+  // Split on smilie codes, escape text parts, replace codes with images
   let result = esc(text);
   SMILIES.forEach(s=>{
-    const regex = new RegExp(':'+s.code+'\\b','gi');
+    const escaped = ':'+s.code;
+    const regex = new RegExp(escaped+'(?=\\s|$|[^a-zA-Z0-9])','gi');
     result = result.replace(regex, `<img src="${s.url}" class="custom-smilie" title=":${s.code}" alt=":${s.code}">`);
   });
   return result;
