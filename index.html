@@ -1104,8 +1104,10 @@ async function deleteMsg(msgId){
 const SESSION_START = new Date().toISOString();
 
 async function loadMessages(){
+  // Votes der letzten 24h auch laden, normale Nachrichten nur ab SESSION_START
+  const since24h=new Date(Date.now()-86400000).toISOString();
   const {data,error}=await sb.from('messages').select('*')
-    .gte('created_at', SESSION_START)
+    .or(`created_at.gte.${SESSION_START},and(media_type.eq.vote,created_at.gte.${since24h})`)
     .order('created_at',{ascending:true}).limit(100);
   if(error){ console.log('DB:',error.message);return; }
   const area=document.getElementById('messagesArea');
@@ -1404,16 +1406,21 @@ async function startVote(){
 }
 
 async function castVote(msgId, side){
-  const {data}=await sb.from('messages').select('content').eq('id',msgId).single();
-  if(!data) return;
+  console.log('castVote aufgerufen:', msgId, side);
+  if(!msgId){ console.error('msgId fehlt!'); return; }
+  const {data, error}=await sb.from('messages').select('content').eq('id',msgId).single();
+  if(error){ console.error('DB Fehler:', error); return; }
+  if(!data){ console.error('Keine Daten für msgId:', msgId); return; }
   const v=JSON.parse(data.content);
-  // Entferne User aus beiden Seiten zuerst
   v.votersA=v.votersA.filter(n=>n!==currentUser.name);
   v.votersB=v.votersB.filter(n=>n!==currentUser.name);
-  // Füge zur gewählten Seite hinzu
   if(side==='a') v.votersA.push(currentUser.name);
   else v.votersB.push(currentUser.name);
-  await sb.from('messages').update({content:JSON.stringify(v)}).eq('id',msgId);
+  const newContent=JSON.stringify(v);
+  const {error:ue}=await sb.from('messages').update({content:newContent}).eq('id',msgId);
+  if(ue){ console.error('Update Fehler:', ue); return; }
+  // Sofort lokal updaten ohne auf Realtime zu warten
+  updateVoteCard(msgId, newContent);
 }
 
 function renderVoteCard(msg){
