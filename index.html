@@ -321,6 +321,39 @@
   .lightbox.open { display:flex; }
   .lightbox img { max-width:90vw;max-height:90vh;border-radius:12px; }
 
+  /* WHISPER / FLÜSTERN */
+  .whisper-indicator {
+    display:none;align-items:center;gap:8px;
+    background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(109,40,217,0.1));
+    border:1px solid rgba(139,92,246,0.4);
+    border-radius:10px;padding:7px 12px;margin-bottom:8px;
+    font-size:12px;color:#a78bfa;font-weight:600;
+  }
+  .whisper-indicator.show { display:flex; }
+  .whisper-indicator .whisper-target { color:white;font-weight:700; }
+  .whisper-cancel { background:none;border:none;color:#a78bfa;cursor:pointer;font-size:16px;margin-left:auto;padding:0 2px;transition:color 0.15s; }
+  .whisper-cancel:hover { color:white; }
+
+  .message.whisper .msg-bubble {
+    background:linear-gradient(135deg,rgba(109,40,217,0.35),rgba(139,92,246,0.2)) !important;
+    border-color:rgba(139,92,246,0.6) !important;
+    color:#e9d5ff !important;
+  }
+  .whisper-label {
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;
+    color:#a78bfa;display:flex;align-items:center;gap:4px;margin-bottom:5px;
+  }
+  .message.whisper .msg-time { color:#7c3aed; }
+
+  /* FLÜSTER-BUTTON in Sidebar */
+  .whisper-btn {
+    background:none;border:1px solid rgba(139,92,246,0.3);border-radius:6px;
+    padding:2px 6px;font-size:11px;color:#a78bfa;cursor:pointer;
+    margin-left:auto;flex-shrink:0;transition:all 0.15s;opacity:0;
+  }
+  .online-user:hover .whisper-btn { opacity:1; }
+  .whisper-btn:hover { background:rgba(139,92,246,0.2);border-color:#a78bfa; }
+
   /* RESPONSIVE */
   @media(max-width:700px){
     .residents-panel { display:none; }
@@ -504,7 +537,13 @@
       <button class="toolbar-btn" onclick="toggleEmoji()">😊 <span>Emoji</span></button>
       <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
       <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
+      <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
       <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
+    </div>
+
+    <div class="whisper-indicator" id="whisperIndicator">
+      🤫 Flüstern an: <span class="whisper-target" id="whisperTargetName"></span>
+      <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
     </div>
 
     <div class="input-box">
@@ -712,6 +751,7 @@ const EMOJIS = {
 
 let currentUser = null, subscription = null, pendingFile = null;
 let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
+let whisperTarget = null; // { id, name }
 
 // BUILD AVATAR PICKER
 (function(){
@@ -844,6 +884,14 @@ function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-di
 function renderMsg(msg){
   const isOwn=msg.user_id===currentUser.id;
   const isGuest=msg.user_id&&msg.user_id.startsWith('guest_');
+  const isWhisper=!!msg.whisper_to;
+
+  // Flüsternachrichten: nur Sender und Empfänger sehen sie
+  if(isWhisper){
+    const isSender = msg.user_id===currentUser.id;
+    const isRecipient = msg.whisper_to===currentUser.id || msg.whisper_to===currentUser.name;
+    if(!isSender && !isRecipient) return null;
+  }
   const t=theme(msg.color_index);
   const avatarEmoji=msg.avatar||(isGuest?'👤':'⭐');
 
@@ -856,6 +904,14 @@ function renderMsg(msg){
 
   // Bubble content
   let bubbleContent=msg.content?parseSmilies(msg.content):'';
+  if(isWhisper){
+    const whisperTo = msg.whisper_to_name||msg.whisper_to;
+    const whisperFrom = isOwn ? 'Du' : esc(msg.user_name||'Gast');
+    const label = isOwn
+      ? `🤫 Flüsterst an <strong>${esc(whisperTo)}</strong>`
+      : `🤫 Flüstert dir zu`;
+    bubbleContent=`<div class="whisper-label">${label}</div>`+bubbleContent;
+  }
   if(msg.media_url){
     const isVid=msg.media_type&&msg.media_type.startsWith('video');
     bubbleContent+=isVid
@@ -878,7 +934,7 @@ function renderMsg(msg){
   }).join('');
 
   const el=document.createElement('div');
-  el.className='message'+(isOwn?' own':'');
+  el.className='message'+(isOwn?' own':'')+(isWhisper?' whisper':'');
   el.dataset.msgId=msg.id;
   el.innerHTML=`
     <div class="msg-avatar-wrap">
@@ -1055,8 +1111,10 @@ function subscribeMessages(){
   });
   channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},(payload)=>{
     const area=document.getElementById('messagesArea');
+    const el=renderMsg(payload.new);
+    if(!el) return; // Flüsternachricht nicht für diesen User
     document.getElementById('welcomeMsg')?.remove();
-    area.appendChild(renderMsg(payload.new));
+    area.appendChild(el);
     area.scrollTop=area.scrollHeight;
   });
 
@@ -1081,16 +1139,46 @@ function renderOnlineUsers(users){
   users.forEach(u=>{
     const t=u.color!==null&&u.color!==undefined?THEMES[u.color]:null;
     const avStyle=t?`background:${t.av};color:${t.tx}`:`background:linear-gradient(135deg,#374151,#6b7280)`;
+    const isMe = u.name===currentUser.name;
     const div=document.createElement('div');
     div.className='online-user';
     div.innerHTML=`
       <div class="online-user-avatar" style="${avStyle}">${u.avatar||'👤'}</div>
-      <div class="online-user-name">${u.name||'Gast'}${u.isGuest?'':' ⭐'}</div>`;
+      <div class="online-user-name">${u.name||'Gast'}${u.isGuest?'':' ⭐'}</div>
+      ${!isMe?`<button class="whisper-btn" onclick="startWhisper('${(u.name||'Gast').replace(/'/g,"\\'")}','${u.id||''}')" title="Flüstern">🤫</button>`:''}`;
     list.appendChild(div);
   });
-  // Update count in title
   const title=document.querySelector('.online-sidebar-title');
   if(title) title.textContent=`👥 Online (${users.length})`;
+}
+
+// ===== FLÜSTERN =====
+function startWhisper(name, id){
+  whisperTarget={name, id};
+  document.getElementById('whisperTargetName').textContent=name;
+  document.getElementById('whisperIndicator').classList.add('show');
+  document.getElementById('msgInput').placeholder=`Flüstern an ${name}...`;
+  document.getElementById('msgInput').focus();
+  document.getElementById('whisperBtn').classList.add('active');
+}
+
+function cancelWhisper(){
+  whisperTarget=null;
+  document.getElementById('whisperIndicator').classList.remove('show');
+  document.getElementById('msgInput').placeholder=`${currentUser?.name||'Du'} schreibt...`;
+  document.getElementById('whisperBtn').classList.remove('active');
+}
+
+function toggleWhisperPicker(){
+  if(whisperTarget){ cancelWhisper(); return; }
+  // Zeige eine schnelle User-Liste zum Auswählen
+  const users=document.querySelectorAll('.online-user');
+  if(users.length<=1){ alert('Niemand anderes ist gerade online!'); return; }
+  // Klick auf Sidebar-User starten – Hinweis anzeigen
+  const ind=document.getElementById('whisperIndicator');
+  ind.classList.add('show');
+  document.getElementById('whisperTargetName').textContent='← wähle jemanden rechts aus';
+  document.getElementById('msgInput').placeholder='Wähle jemanden in der Online-Liste aus...';
 }
 
 async function sendMessage(){
@@ -1109,20 +1197,42 @@ async function sendMessage(){
   const payload={
     content:content||null,user_id:currentUser.id,user_name:currentUser.name,
     is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
-    avatar:currentUser.avatar||null,media_url,media_type
+    avatar:currentUser.avatar||null,media_url,media_type,
+    whisper_to: whisperTarget?whisperTarget.id:null,
+    whisper_to_name: whisperTarget?whisperTarget.name:null,
   };
+  if(whisperTarget) cancelWhisper();
   const {error}=await sb.from('messages').insert(payload);
   if(error){
     console.error('Send:',error);
     const area=document.getElementById('messagesArea');
     document.getElementById('welcomeMsg')?.remove();
-    area.appendChild(renderMsg({...payload,created_at:new Date().toISOString()}));
-    area.scrollTop=area.scrollHeight;
+    const el=renderMsg({...payload,created_at:new Date().toISOString()});
+    if(el){ area.appendChild(el); area.scrollTop=area.scrollHeight; }
   }
 }
 
 function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
-function updateChar(){ document.getElementById('charCount').textContent=`${document.getElementById('msgInput').value.length} / 2000`; }
+function updateChar(){
+  const val=document.getElementById('msgInput').value;
+  document.getElementById('charCount').textContent=`${val.length} / 2000`;
+  // @Name Erkennung für Flüstern
+  const match=val.match(/^@([^\s]+(?:\s[^\s]+)?)\s/);
+  if(match&&!whisperTarget){
+    const name=match[1];
+    // Suche in Online-Liste
+    const users=document.querySelectorAll('.online-user-name');
+    for(const u of users){
+      const uName=u.textContent.replace(' ⭐','').trim();
+      if(uName.toLowerCase()===name.toLowerCase()&&uName!==currentUser.name){
+        startWhisper(uName,'');
+        // Entferne @Name aus Input
+        document.getElementById('msgInput').value=val.replace(/^@[^\s]+(?:\s[^\s]+)?\s/,'');
+        break;
+      }
+    }
+  }
+}
 
 // FILE UPLOAD
 function onFileSelect(e){
@@ -1239,7 +1349,10 @@ window.addEventListener('load',async()=>{
 });
 
 // Add avatar column to messages table if needed
-// Run this SQL in Supabase: ALTER TABLE messages ADD COLUMN IF NOT EXISTS avatar text;
+// Supabase SQL (einmalig ausführen):
+// ALTER TABLE messages ADD COLUMN IF NOT EXISTS avatar text;
+// ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to text;
+// ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to_name text;
 </script>
 </body>
 </html>
