@@ -1185,6 +1185,14 @@ function subscribeMessages(){
     area.scrollTop=area.scrollHeight;
   });
 
+  // Votes Realtime - im gleichen Channel wie alles andere!
+  channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'votes'},(payload)=>{
+    refreshVoteCard(payload.new.poll_id);
+  });
+  channel.on('postgres_changes',{event:'DELETE',schema:'public',table:'votes'},(payload)=>{
+    refreshVoteCard(payload.old.poll_id);
+  });
+
   channel.subscribe(async(status)=>{
     if(status==='SUBSCRIBED'){
       await channel.track({
@@ -1519,14 +1527,7 @@ async function refreshVoteCard(pollId){
 
 // Vote Realtime Subscription
 function subscribeVotes(){
-  sb.channel('votes-channel')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'votes'},(payload)=>{
-      refreshVoteCard(payload.new.poll_id);
-    })
-    .on('postgres_changes',{event:'DELETE',schema:'public',table:'votes'},(payload)=>{
-      refreshVoteCard(payload.old.poll_id);
-    })
-    .subscribe();
+  // Wird jetzt im Haupt-Channel subscribeMessages() gemacht
 }
 
 // LIGHTBOX
