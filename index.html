@@ -1133,10 +1133,13 @@ function subscribeMessages(){
   // Neue Nachrichten
   channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},(payload)=>{
     if(payload.new.media_type==='vote'){
-      // Frisch aus DB laden damit alle den gleichen Stand sehen
-      sb.from('messages').select('content').eq('id',payload.new.id).single().then(({data})=>{
-        if(data) updateVoteCard(payload.new.id, data.content);
-      });
+      const id = payload.new.id;
+      const oldEl = document.querySelector(`[data-msg-id="${id}"]`);
+      if(oldEl){
+        // Komplett neu rendern
+        const newEl = renderVoteCard(payload.new);
+        oldEl.replaceWith(newEl);
+      }
       return;
     }
     const msgEl=document.querySelector(`[data-msg-id="${payload.new.id}"]`);
