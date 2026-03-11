@@ -1132,7 +1132,13 @@ function subscribeMessages(){
 
   // Neue Nachrichten
   channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},(payload)=>{
-    if(payload.new.media_type==='vote'){ updateVoteCard(payload.new.id, payload.new.content); return; }
+    if(payload.new.media_type==='vote'){
+      // Frisch aus DB laden damit alle den gleichen Stand sehen
+      sb.from('messages').select('content').eq('id',payload.new.id).single().then(({data})=>{
+        if(data) updateVoteCard(payload.new.id, data.content);
+      });
+      return;
+    }
     const msgEl=document.querySelector(`[data-msg-id="${payload.new.id}"]`);
     if(msgEl){
       const r=payload.new.reactions||{};
@@ -1405,20 +1411,17 @@ async function startVote(){
 }
 
 async function castVote(msgId, side){
-  console.log('castVote aufgerufen:', msgId, side);
-  if(!msgId){ console.error('msgId fehlt!'); return; }
-  const {data, error}=await sb.from('messages').select('content').eq('id',msgId).single();
-  if(error){ console.error('DB Fehler:', error); return; }
-  if(!data){ console.error('Keine Daten für msgId:', msgId); return; }
+  if(!msgId) return;
+  const {data,error}=await sb.from('messages').select('content').eq('id',msgId).single();
+  if(error||!data) return;
   const v=JSON.parse(data.content);
   v.votersA=v.votersA.filter(n=>n!==currentUser.name);
   v.votersB=v.votersB.filter(n=>n!==currentUser.name);
   if(side==='a') v.votersA.push(currentUser.name);
   else v.votersB.push(currentUser.name);
   const newContent=JSON.stringify(v);
-  const {error:ue}=await sb.from('messages').update({content:newContent}).eq('id',msgId);
-  if(ue){ console.error('Update Fehler:', ue); return; }
-  // Sofort lokal updaten ohne auf Realtime zu warten
+  await sb.from('messages').update({content:newContent}).eq('id',msgId);
+  // Sofort lokal updaten (Realtime kann verzögert sein)
   updateVoteCard(msgId, newContent);
 }
 
