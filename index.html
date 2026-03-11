@@ -919,6 +919,7 @@ async function register(){
 }
 
 async function logout(){
+  stopVotePoller();
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
   if(!currentUser.isGuest) await sb.auth.signOut();
   currentUser=null;
@@ -947,6 +948,7 @@ function startApp(){
   if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
   loadMessages();
   subscribeMessages();
+  startVotePoller();
 }
 
 // MESSAGES
@@ -1505,6 +1507,29 @@ function updateVoteCard(msgId, newContent){
       v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')+
       v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('');
   }catch(e){}
+}
+
+// VOTE POLLING - alle 3 Sekunden aktive Votes aktualisieren
+let votePoller = null;
+function startVotePoller(){
+  if(votePoller) return;
+  votePoller = setInterval(async()=>{
+    const cards = document.querySelectorAll('[data-msg-id]');
+    for(const card of cards){
+      const msgId = card.dataset.msgId;
+      const voteCard = card.querySelector('.vote-card');
+      if(!voteCard) continue;
+      // Ist eine Vote-Karte - frisch aus DB laden
+      const {data} = await sb.from('messages').select('*').eq('id', msgId).eq('media_type','vote').single();
+      if(data){
+        const newEl = renderVoteCard(data);
+        card.replaceWith(newEl);
+      }
+    }
+  }, 3000);
+}
+function stopVotePoller(){
+  if(votePoller){ clearInterval(votePoller); votePoller=null; }
 }
 
 // LIGHTBOX
