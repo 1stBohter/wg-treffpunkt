@@ -1104,10 +1104,8 @@ async function deleteMsg(msgId){
 const SESSION_START = new Date().toISOString();
 
 async function loadMessages(){
-  // Votes der letzten 24h auch laden, normale Nachrichten nur ab SESSION_START
-  const since24h=new Date(Date.now()-86400000).toISOString();
   const {data,error}=await sb.from('messages').select('*')
-    .or(`created_at.gte.${SESSION_START},and(media_type.eq.vote,created_at.gte.${since24h})`)
+    .gte('created_at', SESSION_START)
     .order('created_at',{ascending:true}).limit(100);
   if(error){ console.log('DB:',error.message);return; }
   const area=document.getElementById('messagesArea');
