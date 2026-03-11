@@ -326,6 +326,40 @@
   .btn-send:hover { background:#d4ff20;transform:scale(1.05); }
   .char-count { font-size:11px;color:var(--text-muted);text-align:right;margin-top:5px; }
 
+  /* VOTING */
+  .vote-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:300;animation:fadeIn 0.2s ease; }
+  .vote-modal-overlay.open { display:flex; }
+  .vote-modal { background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:420px;max-width:95vw;animation:slideUp 0.25s ease; }
+  .vote-modal h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);margin-bottom:18px; }
+  .vote-modal label { display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px; }
+  .vote-modal input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
+  .vote-modal input:focus { border-color:var(--accent2); }
+  .vote-btn-row { display:flex;gap:10px;margin-top:20px; }
+  .vote-modal .btn-start { flex:1;background:var(--accent);color:#0a0a0f;border:none;border-radius:10px;padding:11px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s; }
+  .vote-modal .btn-start:hover { background:#d4ff20; }
+  .vote-modal .btn-cancel { background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s; }
+  .vote-modal .btn-cancel:hover { border-color:var(--text-muted);color:var(--text); }
+
+  .vote-card { background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin:4px 0;width:100%; }
+  .vote-card-title { font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;line-height:1.3; }
+  .vote-card-title::before { content:'🗳️ '; }
+  .vote-options { display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap; }
+  .vote-option-btn { flex:1;min-width:100px;padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center; }
+  .vote-option-btn:hover { border-color:var(--accent2);color:var(--text); }
+  .vote-option-btn.voted-a { border-color:#22c55e;background:rgba(34,197,94,0.15);color:#22c55e; }
+  .vote-option-btn.voted-b { border-color:#ef4444;background:rgba(239,68,68,0.15);color:#ef4444; }
+  .vote-bars { display:flex;flex-direction:column;gap:6px;margin-bottom:10px; }
+  .vote-bar-row { display:flex;align-items:center;gap:8px; }
+  .vote-bar-label { font-size:12px;font-weight:700;color:var(--text-muted);min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .vote-bar-track { flex:1;background:var(--surface2);border-radius:20px;height:10px;overflow:hidden; }
+  .vote-bar-fill-a { height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:20px;transition:width 0.4s ease; }
+  .vote-bar-fill-b { height:100%;background:linear-gradient(90deg,#ef4444,#b91c1c);border-radius:20px;transition:width 0.4s ease; }
+  .vote-bar-count { font-size:12px;font-weight:700;color:var(--text);min-width:20px;text-align:right; }
+  .vote-voters { font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.6; }
+  .vote-voters span { display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;margin:2px 2px;font-size:11px; }
+  .vote-voters span.vote-a { border-color:#22c55e;color:#22c55e; }
+  .vote-voters span.vote-b { border-color:#ef4444;color:#ef4444; }
+
   /* LIGHTBOX */
   .lightbox { position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out; }
   .lightbox.open { display:flex; }
@@ -476,6 +510,23 @@
   </div><!-- end modal-panel -->
 </div>
 
+<!-- VOTE MODAL -->
+<div class="vote-modal-overlay" id="voteModalOverlay">
+  <div class="vote-modal">
+    <h3>🗳️ Abstimmung erstellen</h3>
+    <label>Frage / Thema</label>
+    <input type="text" id="voteQuestion" placeholder="z.B. Sollen wir Pizza bestellen?" maxlength="120">
+    <label>Option A (Ja-Seite)</label>
+    <input type="text" id="voteOptA" placeholder="z.B. 👍 Dafür" maxlength="40">
+    <label>Option B (Nein-Seite)</label>
+    <input type="text" id="voteOptB" placeholder="z.B. 👎 Dagegen" maxlength="40">
+    <div class="vote-btn-row">
+      <button class="btn-cancel" onclick="closeVoteModal()">Abbrechen</button>
+      <button class="btn-start" onclick="startVote()">🗳️ Abstimmung starten</button>
+    </div>
+  </div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -557,6 +608,7 @@
           <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
           <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
           <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
+          <button class="toolbar-btn" onclick="openVoteModal()">🗳️ <span>Abstimmung</span></button>
           <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
         </div>
 
@@ -901,6 +953,7 @@ function startApp(){
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 function renderMsg(msg){
+  if(msg.media_type==='vote') return renderVoteCard(msg);
   const isOwn=msg.user_id===currentUser.id;
   const isGuest=msg.user_id&&msg.user_id.startsWith('guest_');
   const isWhisper=!!msg.whisper_to;
@@ -1078,6 +1131,7 @@ function subscribeMessages(){
 
   // Neue Nachrichten
   channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},(payload)=>{
+    if(payload.new.media_type==='vote'){ updateVoteCard(payload.new.id, payload.new.content); return; }
     const msgEl=document.querySelector(`[data-msg-id="${payload.new.id}"]`);
     if(msgEl){
       const r=payload.new.reactions||{};
@@ -1318,6 +1372,119 @@ function showGifs(results){
 async function sendGif(url){
   document.getElementById('emojiPanel').classList.remove('open');
   await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,media_url:url,media_type:'image/gif'});
+}
+
+// VOTING
+function openVoteModal(){
+  document.getElementById('voteModalOverlay').classList.add('open');
+  document.getElementById('voteQuestion').focus();
+}
+function closeVoteModal(){
+  document.getElementById('voteModalOverlay').classList.remove('open');
+  document.getElementById('voteQuestion').value='';
+  document.getElementById('voteOptA').value='';
+  document.getElementById('voteOptB').value='';
+}
+
+async function startVote(){
+  const q=document.getElementById('voteQuestion').value.trim();
+  const a=document.getElementById('voteOptA').value.trim()||'👍 Dafür';
+  const b=document.getElementById('voteOptB').value.trim()||'👎 Dagegen';
+  if(!q) return;
+  const voteData={type:'vote',question:q,optA:a,optB:b,votersA:[],votersB:[]};
+  await sb.from('messages').insert({
+    content:JSON.stringify(voteData),
+    user_id:currentUser.id,user_name:currentUser.name,
+    is_guest:currentUser.isGuest,
+    color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
+    avatar:currentUser.avatar||null,
+    media_url:null,media_type:'vote'
+  });
+  closeVoteModal();
+}
+
+async function castVote(msgId, side){
+  const {data}=await sb.from('messages').select('content').eq('id',msgId).single();
+  if(!data) return;
+  const v=JSON.parse(data.content);
+  // Entferne User aus beiden Seiten zuerst
+  v.votersA=v.votersA.filter(n=>n!==currentUser.name);
+  v.votersB=v.votersB.filter(n=>n!==currentUser.name);
+  // Füge zur gewählten Seite hinzu
+  if(side==='a') v.votersA.push(currentUser.name);
+  else v.votersB.push(currentUser.name);
+  await sb.from('messages').update({content:JSON.stringify(v)}).eq('id',msgId);
+}
+
+function renderVoteCard(msg){
+  const v=JSON.parse(msg.content);
+  const total=v.votersA.length+v.votersB.length||1;
+  const pA=Math.round(v.votersA.length/total*100);
+  const pB=Math.round(v.votersB.length/total*100);
+  const myVoteA=v.votersA.includes(currentUser.name);
+  const myVoteB=v.votersB.includes(currentUser.name);
+
+  const el=document.createElement('div');
+  el.className='message';
+  el.dataset.msgId=msg.id;
+  el.innerHTML=`
+    <div class="msg-content" style="max-width:420px;width:100%">
+      <div class="vote-card">
+        <div class="vote-card-title">${esc(v.question)}</div>
+        <div class="vote-options">
+          <button class="vote-option-btn${myVoteA?' voted-a':''}" onclick="castVote(${msg.id},'a')">${esc(v.optA)}</button>
+          <button class="vote-option-btn${myVoteB?' voted-b':''}" onclick="castVote(${msg.id},'b')">${esc(v.optB)}</button>
+        </div>
+        <div class="vote-bars">
+          <div class="vote-bar-row">
+            <div class="vote-bar-label">${esc(v.optA)}</div>
+            <div class="vote-bar-track"><div class="vote-bar-fill-a" style="width:${myVoteA||myVoteB?pA:0}%"></div></div>
+            <div class="vote-bar-count">${v.votersA.length}</div>
+          </div>
+          <div class="vote-bar-row">
+            <div class="vote-bar-label">${esc(v.optB)}</div>
+            <div class="vote-bar-track"><div class="vote-bar-fill-b" style="width:${myVoteA||myVoteB?pB:0}%"></div></div>
+            <div class="vote-bar-count">${v.votersB.length}</div>
+          </div>
+        </div>
+        <div class="vote-voters">
+          ${v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
+          ${v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="msg-time">${timeStr(msg.created_at)} · gestartet von ${esc(msg.user_name)}</div>
+    </div>`;
+  return el;
+}
+
+function updateVoteCard(msgId, newContent){
+  const el=document.querySelector(`[data-msg-id="${msgId}"]`);
+  if(!el) return;
+  try{
+    const v=JSON.parse(newContent);
+    const total=v.votersA.length+v.votersB.length||1;
+    const pA=Math.round(v.votersA.length/total*100);
+    const pB=Math.round(v.votersB.length/total*100);
+    const myVoteA=v.votersA.includes(currentUser.name);
+    const myVoteB=v.votersB.includes(currentUser.name);
+    // Buttons
+    el.querySelectorAll('.vote-option-btn').forEach((btn,i)=>{
+      btn.className='vote-option-btn'+(i===0&&myVoteA?' voted-a':i===1&&myVoteB?' voted-b':'');
+    });
+    // Balken
+    const fills=el.querySelectorAll('.vote-bar-fill-a,.vote-bar-fill-b');
+    if(fills[0]) fills[0].style.width=pA+'%';
+    if(fills[1]) fills[1].style.width=pB+'%';
+    // Zähler
+    const counts=el.querySelectorAll('.vote-bar-count');
+    if(counts[0]) counts[0].textContent=v.votersA.length;
+    if(counts[1]) counts[1].textContent=v.votersB.length;
+    // Voter-Namen
+    const voters=el.querySelector('.vote-voters');
+    if(voters) voters.innerHTML=
+      v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')+
+      v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('');
+  }catch(e){}
 }
 
 // LIGHTBOX
