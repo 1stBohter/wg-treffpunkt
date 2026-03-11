@@ -822,7 +822,10 @@ function showError(id,msg){ const el=document.getElementById(id);el.textContent=
 async function joinAsGuest(){
   const name=document.getElementById('guestName').value.trim();
   if(!name||name.length<2) return showError('guestError','Bitte gib einen Namen ein (mind. 2 Zeichen).');
-  currentUser={name,isGuest:true,id:'guest_'+Math.random().toString(36).substr(2,9),colorIndex:null,avatar:'👤'};
+  // Jeder Tab bekommt seine eigene Session-ID (sessionStorage = nur dieser Tab)
+  let guestId = sessionStorage.getItem('wg_guest_id');
+  if(!guestId){ guestId='guest_'+Math.random().toString(36).substr(2,9); sessionStorage.setItem('wg_guest_id',guestId); }
+  currentUser={name,isGuest:true,id:guestId,colorIndex:null,avatar:'👤'};
   startApp();
 }
 
@@ -889,11 +892,10 @@ function renderMsg(msg){
 
   // Flüsternachrichten: nur Sender und Empfänger sehen sie
   if(isWhisper){
-    const isSender = msg.user_id===currentUser.id;
+    const isSender = msg.user_id===currentUser.id || msg.user_name===currentUser.name;
     const isRecipient = msg.whisper_to===currentUser.id 
       || msg.whisper_to===currentUser.name
-      || msg.whisper_to_name===currentUser.name
-      || msg.whisper_to_name===currentUser.id;
+      || msg.whisper_to_name===currentUser.name;
     if(!isSender && !isRecipient) return null;
   }
   const t=theme(msg.color_index);
@@ -1205,7 +1207,7 @@ async function sendMessage(){
     content:content||null,user_id:currentUser.id,user_name:currentUser.name,
     is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
     avatar:currentUser.avatar||null,media_url,media_type,
-    whisper_to: whisperTarget?whisperTarget.id:null,
+    whisper_to: whisperTarget?whisperTarget.name:null,
     whisper_to_name: whisperTarget?whisperTarget.name:null,
   };
   if(whisperTarget) cancelWhisper();
