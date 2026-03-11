@@ -554,8 +554,8 @@
       <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
     </div>
 
-    <div style="text-align:center;margin-bottom:6px;">
-      <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;"></span>
+    <div style="text-align:center;margin-bottom:6px;min-height:28px;">
+      <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:0.3em;text-transform:uppercase;color:rgba(200,255,0,0.5);pointer-events:none;user-select:none;"></span>
     </div>
     <div class="input-box">
       <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar()">
@@ -884,7 +884,10 @@ function startApp(){
   if(t){ av.style.background=t.av; av.style.color=t.tx; }
   else { av.style.background='rgba(55,65,81,0.5)'; }
   document.getElementById('headerName').textContent=currentUser.name;
-  document.getElementById('userWatermark').textContent=currentUser.name;
+  setTimeout(()=>{
+    const wm=document.getElementById('userWatermark');
+    if(wm) wm.textContent=currentUser.name;
+  },50);
   const roleEl=document.getElementById('headerRole');
   if(roleEl) roleEl.textContent=currentUser.isGuest?'👤 Gast':'⭐ Member';
   const msgInput=document.getElementById('msgInput');
