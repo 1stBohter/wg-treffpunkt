@@ -514,59 +514,60 @@
         </div>
       </div>
 
-      <div class="input-area">
-    <div class="emoji-panel" id="emojiPanel">
-      <div class="emoji-tabs">
-        <button class="emoji-tab active" onclick="switchETab('smileys',this)">😀</button>
-        <button class="emoji-tab" onclick="switchETab('hearts',this)">❤️</button>
-        <button class="emoji-tab" onclick="switchETab('hands',this)">👋</button>
-        <button class="emoji-tab" onclick="switchETab('nature',this)">🌿</button>
-        <button class="emoji-tab" onclick="switchETab('food',this)">🍕</button>
-        <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
-        <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
-        <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
+            <div class="input-area">
 
-      </div>
-      <div class="emoji-grid" id="emojiGrid"></div>
+        <div class="emoji-panel" id="emojiPanel">
+          <div class="emoji-tabs">
+            <button class="emoji-tab active" onclick="switchETab('smileys',this)">😀</button>
+            <button class="emoji-tab" onclick="switchETab('hearts',this)">❤️</button>
+            <button class="emoji-tab" onclick="switchETab('hands',this)">👋</button>
+            <button class="emoji-tab" onclick="switchETab('nature',this)">🌿</button>
+            <button class="emoji-tab" onclick="switchETab('food',this)">🍕</button>
+            <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
+            <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
+            <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
+          </div>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
 
-    </div>
+        <div class="smilie-panel" id="smiliePanel">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎭 Chat-Smilies – einfach :code tippen!</div>
+          <div class="smilie-grid" id="smilieGrid"></div>
+        </div>
 
-    <div class="upload-preview" id="uploadPreview">
-      <div id="uploadThumb"></div>
-      <div class="upload-preview-name" id="uploadName"></div>
-      <button class="upload-remove" onclick="clearUpload()">✕</button>
-    </div>
+        <div class="upload-preview" id="uploadPreview">
+          <div id="uploadThumb"></div>
+          <div class="upload-preview-name" id="uploadName"></div>
+          <button class="upload-remove" onclick="clearUpload()">✕</button>
+        </div>
 
-    <div class="smilie-panel" id="smiliePanel">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎭 Chat-Smilies – einfach :code tippen!</div>
-      <div class="smilie-grid" id="smilieGrid"></div>
-    </div>
+        <div class="whisper-indicator" id="whisperIndicator">
+          🤫 Flüstern an: <span class="whisper-target" id="whisperTargetName"></span>
+          <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
+        </div>
 
-    <div class="input-toolbar">
-      <button class="toolbar-btn" onclick="toggleEmoji()">😊 <span>Emoji</span></button>
-      <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
-      <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
-      <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
-      <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
-    </div>
+        <div style="text-align:center;margin-bottom:6px;">
+          <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;"></span>
+        </div>
 
-    <div class="whisper-indicator" id="whisperIndicator">
-      🤫 Flüstern an: <span class="whisper-target" id="whisperTargetName"></span>
-      <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
-    </div>
+        <div class="input-toolbar">
+          <button class="toolbar-btn" onclick="toggleEmoji()">😊 <span>Emoji</span></button>
+          <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
+          <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
+          <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
+          <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
+        </div>
 
-    <div style="text-align:center;margin-bottom:6px;">
-      <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;"></span>
-    </div>
-    <div class="input-box">
-      <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar()">
-      <button class="btn-send" onclick="sendMessage()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-      </button>
-    </div>
-    <div class="char-count" id="charCount">0 / 2000</div>
+        <div class="input-box">
+          <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar()">
+          <button class="btn-send" onclick="sendMessage()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+        <div class="char-count" id="charCount">0 / 2000</div>
+
       </div>
     </div><!-- end chat-main -->
 
@@ -1243,7 +1244,10 @@ function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>
 function toggleEmoji(){
   const p=document.getElementById('emojiPanel');
   const open=p.classList.toggle('open');
-  if(open) buildEmojiGrid('smileys');
+  if(open){
+    buildEmojiGrid('smileys');
+    document.getElementById('smiliePanel').classList.remove('open');
+  }
 }
 function insertEmoji(em){
   const inp=document.getElementById('msgInput');
