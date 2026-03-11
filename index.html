@@ -1519,12 +1519,32 @@ function startVotePoller(){
       const msgId = card.dataset.msgId;
       const voteCard = card.querySelector('.vote-card');
       if(!voteCard) continue;
-      // Ist eine Vote-Karte - frisch aus DB laden
-      const {data} = await sb.from('messages').select('*').eq('id', msgId).eq('media_type','vote').single();
-      if(data){
-        const newEl = renderVoteCard(data);
-        card.replaceWith(newEl);
-      }
+      const {data} = await sb.from('messages').select('*').eq('id', msgId).single();
+      if(!data || data.media_type !== 'vote') continue;
+      const v = JSON.parse(data.content);
+      const total = v.votersA.length + v.votersB.length || 1;
+      const pA = Math.round(v.votersA.length/total*100);
+      const pB = Math.round(v.votersB.length/total*100);
+      const myVoteA = v.votersA.includes(currentUser.name);
+      const myVoteB = v.votersB.includes(currentUser.name);
+      // Buttons updaten
+      const btns = card.querySelectorAll('.vote-option-btn');
+      if(btns[0]) btns[0].className = 'vote-option-btn' + (myVoteA?' voted-a':'');
+      if(btns[1]) btns[1].className = 'vote-option-btn' + (myVoteB?' voted-b':'');
+      // Balken
+      const fillA = card.querySelector('.vote-bar-fill-a');
+      const fillB = card.querySelector('.vote-bar-fill-b');
+      if(fillA) fillA.style.width = pA+'%';
+      if(fillB) fillB.style.width = pB+'%';
+      // Zähler
+      const counts = card.querySelectorAll('.vote-bar-count');
+      if(counts[0]) counts[0].textContent = v.votersA.length;
+      if(counts[1]) counts[1].textContent = v.votersB.length;
+      // Namen
+      const voters = card.querySelector('.vote-voters');
+      if(voters) voters.innerHTML =
+        v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('') +
+        v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('');
     }
   }, 3000);
 }
