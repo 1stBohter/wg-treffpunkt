@@ -1427,33 +1427,41 @@ function renderVoteCard(msg){
   const el=document.createElement('div');
   el.className='message';
   el.dataset.msgId=msg.id;
-  el.innerHTML=`
-    <div class="msg-content" style="max-width:420px;width:100%">
-      <div class="vote-card">
-        <div class="vote-card-title">${esc(v.question)}</div>
-        <div class="vote-options">
-          <button class="vote-option-btn${myVoteA?' voted-a':''}" onclick="castVote(${msg.id},'a')">${esc(v.optA)}</button>
-          <button class="vote-option-btn${myVoteB?' voted-b':''}" onclick="castVote(${msg.id},'b')">${esc(v.optB)}</button>
+
+  const card=document.createElement('div');
+  card.className='msg-content';
+  card.style.cssText='max-width:420px;width:100%';
+  card.innerHTML=`
+    <div class="vote-card">
+      <div class="vote-card-title">${esc(v.question)}</div>
+      <div class="vote-options">
+        <button class="vote-option-btn${myVoteA?' voted-a':''}" data-side="a">${esc(v.optA)}</button>
+        <button class="vote-option-btn${myVoteB?' voted-b':''}" data-side="b">${esc(v.optB)}</button>
+      </div>
+      <div class="vote-bars">
+        <div class="vote-bar-row">
+          <div class="vote-bar-label">${esc(v.optA)}</div>
+          <div class="vote-bar-track"><div class="vote-bar-fill-a" style="width:${pA}%"></div></div>
+          <div class="vote-bar-count">${v.votersA.length}</div>
         </div>
-        <div class="vote-bars">
-          <div class="vote-bar-row">
-            <div class="vote-bar-label">${esc(v.optA)}</div>
-            <div class="vote-bar-track"><div class="vote-bar-fill-a" style="width:${myVoteA||myVoteB?pA:0}%"></div></div>
-            <div class="vote-bar-count">${v.votersA.length}</div>
-          </div>
-          <div class="vote-bar-row">
-            <div class="vote-bar-label">${esc(v.optB)}</div>
-            <div class="vote-bar-track"><div class="vote-bar-fill-b" style="width:${myVoteA||myVoteB?pB:0}%"></div></div>
-            <div class="vote-bar-count">${v.votersB.length}</div>
-          </div>
-        </div>
-        <div class="vote-voters">
-          ${v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
-          ${v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
+        <div class="vote-bar-row">
+          <div class="vote-bar-label">${esc(v.optB)}</div>
+          <div class="vote-bar-track"><div class="vote-bar-fill-b" style="width:${pB}%"></div></div>
+          <div class="vote-bar-count">${v.votersB.length}</div>
         </div>
       </div>
-      <div class="msg-time">${timeStr(msg.created_at)} · gestartet von ${esc(msg.user_name)}</div>
-    </div>`;
+      <div class="vote-voters">
+        ${v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
+        ${v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
+      </div>
+    </div>
+    <div class="msg-time">${timeStr(msg.created_at)} · gestartet von ${esc(msg.user_name)}</div>`;
+
+  card.querySelectorAll('.vote-option-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>castVote(msg.id, btn.dataset.side));
+  });
+
+  el.appendChild(card);
   return el;
 }
 
