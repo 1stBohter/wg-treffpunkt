@@ -955,13 +955,16 @@ function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-di
 
 function renderMsg(msg){
   if(msg.media_type==='vote'){
-    // Votes async laden und Karte danach updaten
     const placeholder = renderVoteCard(msg, []);
-    loadVotesForPoll(msg.id).then(voteData=>{
-      const newEl = renderVoteCard(msg, voteData);
-      const old = document.querySelector(`[data-poll-id="${msg.id}"]`);
-      if(old) old.replaceWith(newEl);
-    });
+    if(!placeholder) return null;
+    if(msg.id){
+      loadVotesForPoll(msg.id).then(voteData=>{
+        const newEl = renderVoteCard(msg, voteData);
+        if(!newEl) return;
+        const existing = document.querySelector(`[data-poll-id="${msg.id}"]`);
+        if(existing) existing.replaceWith(newEl);
+      });
+    }
     return placeholder;
   }
   const isOwn=msg.user_id===currentUser.id;
@@ -1167,10 +1170,16 @@ function subscribeMessages(){
   channel.on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},(payload)=>{
     document.querySelector(`[data-msg-id="${payload.old.id}"]`)?.remove();
   });
-  channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},(payload)=>{
+  channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async(payload)=>{
     const area=document.getElementById('messagesArea');
-    const el=renderMsg(payload.new);
-    if(!el) return; // Flüsternachricht nicht für diesen User
+    let msg=payload.new;
+    // Sicherheitshalber: bei vote immer frisch aus DB laden
+    if(msg.media_type==='vote' || !msg.content){
+      const {data}=await sb.from('messages').select('*').eq('id',msg.id).single();
+      if(data) msg=data;
+    }
+    const el=renderMsg(msg);
+    if(!el) return;
     document.getElementById('welcomeMsg')?.remove();
     area.appendChild(el);
     area.scrollTop=area.scrollHeight;
@@ -1444,7 +1453,10 @@ async function loadVotesForPoll(pollId){
 }
 
 function renderVoteCard(msg, voteData=[]){
-  const v=JSON.parse(msg.content);
+  if(!msg || !msg.content) return null;
+  let v;
+  try{ v=JSON.parse(msg.content); }catch(e){ return null; }
+  if(!v || v.type!=='vote') return null;
   const votersA=voteData.filter(r=>r.choice==='a').map(r=>r.user_name);
   const votersB=voteData.filter(r=>r.choice==='b').map(r=>r.user_name);
   const total=votersA.length+votersB.length||1;
