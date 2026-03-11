@@ -919,7 +919,6 @@ async function register(){
 }
 
 async function logout(){
-  stopVotePoller();
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
   if(!currentUser.isGuest) await sb.auth.signOut();
   currentUser=null;
@@ -948,14 +947,23 @@ function startApp(){
   if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
   loadMessages();
   subscribeMessages();
-  startVotePoller();
+  subscribeVotes();
 }
 
 // MESSAGES
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 function renderMsg(msg){
-  if(msg.media_type==='vote') return renderVoteCard(msg);
+  if(msg.media_type==='vote'){
+    // Votes async laden und Karte danach updaten
+    const placeholder = renderVoteCard(msg, []);
+    loadVotesForPoll(msg.id).then(voteData=>{
+      const newEl = renderVoteCard(msg, voteData);
+      const old = document.querySelector(`[data-poll-id="${msg.id}"]`);
+      if(old) old.replaceWith(newEl);
+    });
+    return placeholder;
+  }
   const isOwn=msg.user_id===currentUser.id;
   const isGuest=msg.user_id&&msg.user_id.startsWith('guest_');
   const isWhisper=!!msg.whisper_to;
@@ -1403,44 +1411,52 @@ async function startVote(){
   const a=document.getElementById('voteOptA').value.trim()||'👍 Dafür';
   const b=document.getElementById('voteOptB').value.trim()||'👎 Dagegen';
   if(!q) return;
-  const voteData={type:'vote',question:q,optA:a,optB:b,votersA:[],votersB:[]};
-  await sb.from('messages').insert({
-    content:JSON.stringify(voteData),
-    user_id:currentUser.id,user_name:currentUser.name,
+  // Poll als message speichern
+  const {data,error}=await sb.from('messages').insert({
+    content:JSON.stringify({type:'vote',question:q,optA:a,optB:b}),
+    user_id:currentUser.id, user_name:currentUser.name,
     is_guest:currentUser.isGuest,
     color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
     avatar:currentUser.avatar||null,
-    media_url:null,media_type:'vote'
+    media_url:null, media_type:'vote'
+  }).select().single();
+  if(!error && data) closeVoteModal();
+  else closeVoteModal();
+}
+
+async function castVote(pollId, choice){
+  if(!pollId || !currentUser) return;
+  // Alten Vote löschen falls vorhanden
+  await sb.from('votes').delete()
+    .eq('poll_id', pollId)
+    .eq('user_name', currentUser.name);
+  // Neuen Vote einfügen
+  await sb.from('votes').insert({
+    poll_id: pollId,
+    user_name: currentUser.name,
+    choice: choice
   });
-  closeVoteModal();
 }
 
-async function castVote(msgId, side){
-  if(!msgId) return;
-  const {data,error}=await sb.from('messages').select('content').eq('id',msgId).single();
-  if(error||!data) return;
-  const v=JSON.parse(data.content);
-  v.votersA=v.votersA.filter(n=>n!==currentUser.name);
-  v.votersB=v.votersB.filter(n=>n!==currentUser.name);
-  if(side==='a') v.votersA.push(currentUser.name);
-  else v.votersB.push(currentUser.name);
-  const newContent=JSON.stringify(v);
-  await sb.from('messages').update({content:newContent}).eq('id',msgId);
-  // Sofort lokal updaten (Realtime kann verzögert sein)
-  updateVoteCard(msgId, newContent);
+async function loadVotesForPoll(pollId){
+  const {data}=await sb.from('votes').select('*').eq('poll_id', pollId);
+  return data||[];
 }
 
-function renderVoteCard(msg){
+function renderVoteCard(msg, voteData=[]){
   const v=JSON.parse(msg.content);
-  const total=v.votersA.length+v.votersB.length||1;
-  const pA=Math.round(v.votersA.length/total*100);
-  const pB=Math.round(v.votersB.length/total*100);
-  const myVoteA=v.votersA.includes(currentUser.name);
-  const myVoteB=v.votersB.includes(currentUser.name);
+  const votersA=voteData.filter(r=>r.choice==='a').map(r=>r.user_name);
+  const votersB=voteData.filter(r=>r.choice==='b').map(r=>r.user_name);
+  const total=votersA.length+votersB.length||1;
+  const pA=Math.round(votersA.length/total*100);
+  const pB=Math.round(votersB.length/total*100);
+  const myVoteA=votersA.includes(currentUser.name);
+  const myVoteB=votersB.includes(currentUser.name);
 
   const el=document.createElement('div');
   el.className='message';
   el.dataset.msgId=msg.id;
+  el.dataset.pollId=msg.id;
 
   const card=document.createElement('div');
   card.className='msg-content';
@@ -1456,100 +1472,49 @@ function renderVoteCard(msg){
         <div class="vote-bar-row">
           <div class="vote-bar-label">${esc(v.optA)}</div>
           <div class="vote-bar-track"><div class="vote-bar-fill-a" style="width:${pA}%"></div></div>
-          <div class="vote-bar-count">${v.votersA.length}</div>
+          <div class="vote-bar-count">${votersA.length}</div>
         </div>
         <div class="vote-bar-row">
           <div class="vote-bar-label">${esc(v.optB)}</div>
           <div class="vote-bar-track"><div class="vote-bar-fill-b" style="width:${pB}%"></div></div>
-          <div class="vote-bar-count">${v.votersB.length}</div>
+          <div class="vote-bar-count">${votersB.length}</div>
         </div>
       </div>
       <div class="vote-voters">
-        ${v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
-        ${v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
+        ${votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
+        ${votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
       </div>
     </div>
     <div class="msg-time">${timeStr(msg.created_at)} · gestartet von ${esc(msg.user_name)}</div>`;
 
   card.querySelectorAll('.vote-option-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>castVote(msg.id, btn.dataset.side));
+    btn.addEventListener('click', ()=>castVote(msg.id, btn.dataset.side));
   });
 
   el.appendChild(card);
   return el;
 }
 
-function updateVoteCard(msgId, newContent){
-  const el=document.querySelector(`[data-msg-id="${msgId}"]`);
+async function refreshVoteCard(pollId){
+  const el=document.querySelector(`[data-poll-id="${pollId}"]`);
   if(!el) return;
-  try{
-    const v=JSON.parse(newContent);
-    const total=v.votersA.length+v.votersB.length||1;
-    const pA=Math.round(v.votersA.length/total*100);
-    const pB=Math.round(v.votersB.length/total*100);
-    const myVoteA=v.votersA.includes(currentUser.name);
-    const myVoteB=v.votersB.includes(currentUser.name);
-    // Buttons
-    el.querySelectorAll('.vote-option-btn').forEach((btn,i)=>{
-      btn.className='vote-option-btn'+(i===0&&myVoteA?' voted-a':i===1&&myVoteB?' voted-b':'');
-    });
-    // Balken
-    const fills=el.querySelectorAll('.vote-bar-fill-a,.vote-bar-fill-b');
-    if(fills[0]) fills[0].style.width=pA+'%';
-    if(fills[1]) fills[1].style.width=pB+'%';
-    // Zähler
-    const counts=el.querySelectorAll('.vote-bar-count');
-    if(counts[0]) counts[0].textContent=v.votersA.length;
-    if(counts[1]) counts[1].textContent=v.votersB.length;
-    // Voter-Namen
-    const voters=el.querySelector('.vote-voters');
-    if(voters) voters.innerHTML=
-      v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')+
-      v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('');
-  }catch(e){}
+  const {data:msgData}=await sb.from('messages').select('*').eq('id',pollId).single();
+  if(!msgData) return;
+  const voteData=await loadVotesForPoll(pollId);
+  const newEl=renderVoteCard(msgData, voteData);
+  el.replaceWith(newEl);
 }
 
-// VOTE POLLING - alle 3 Sekunden aktive Votes aktualisieren
-let votePoller = null;
-function startVotePoller(){
-  if(votePoller) return;
-  votePoller = setInterval(async()=>{
-    const cards = document.querySelectorAll('[data-msg-id]');
-    for(const card of cards){
-      const msgId = card.dataset.msgId;
-      const voteCard = card.querySelector('.vote-card');
-      if(!voteCard) continue;
-      const {data} = await sb.from('messages').select('*').eq('id', msgId).single();
-      if(!data || data.media_type !== 'vote') continue;
-      const v = JSON.parse(data.content);
-      const total = v.votersA.length + v.votersB.length || 1;
-      const pA = Math.round(v.votersA.length/total*100);
-      const pB = Math.round(v.votersB.length/total*100);
-      const myVoteA = v.votersA.includes(currentUser.name);
-      const myVoteB = v.votersB.includes(currentUser.name);
-      // Buttons updaten
-      const btns = card.querySelectorAll('.vote-option-btn');
-      if(btns[0]) btns[0].className = 'vote-option-btn' + (myVoteA?' voted-a':'');
-      if(btns[1]) btns[1].className = 'vote-option-btn' + (myVoteB?' voted-b':'');
-      // Balken
-      const fillA = card.querySelector('.vote-bar-fill-a');
-      const fillB = card.querySelector('.vote-bar-fill-b');
-      if(fillA) fillA.style.width = pA+'%';
-      if(fillB) fillB.style.width = pB+'%';
-      // Zähler
-      const counts = card.querySelectorAll('.vote-bar-count');
-      if(counts[0]) counts[0].textContent = v.votersA.length;
-      if(counts[1]) counts[1].textContent = v.votersB.length;
-      // Namen
-      const voters = card.querySelector('.vote-voters');
-      if(voters) voters.innerHTML =
-        v.votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('') +
-        v.votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('');
-    }
-  }, 3000);
-}
-function stopVotePoller(){
-  if(votePoller){ clearInterval(votePoller); votePoller=null; }
+// Vote Realtime Subscription
+function subscribeVotes(){
+  sb.channel('votes-channel')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'votes'},(payload)=>{
+      refreshVoteCard(payload.new.poll_id);
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'votes'},(payload)=>{
+      refreshVoteCard(payload.old.poll_id);
+    })
+    .subscribe();
 }
 
 // LIGHTBOX
