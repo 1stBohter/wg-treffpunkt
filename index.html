@@ -890,7 +890,10 @@ function renderMsg(msg){
   // Flüsternachrichten: nur Sender und Empfänger sehen sie
   if(isWhisper){
     const isSender = msg.user_id===currentUser.id;
-    const isRecipient = msg.whisper_to===currentUser.id || msg.whisper_to===currentUser.name;
+    const isRecipient = msg.whisper_to===currentUser.id 
+      || msg.whisper_to===currentUser.name
+      || msg.whisper_to_name===currentUser.name
+      || msg.whisper_to_name===currentUser.id;
     if(!isSender && !isRecipient) return null;
   }
   const t=theme(msg.color_index);
@@ -1078,7 +1081,10 @@ async function loadMessages(){
   const area=document.getElementById('messagesArea');
   if(data&&data.length>0){
     document.getElementById('welcomeMsg')?.remove();
-    data.forEach(m=>area.appendChild(renderMsg(m)));
+    data.forEach(m=>{
+      const el=renderMsg(m);
+      if(el) area.appendChild(el);
+    });
     area.scrollTop=area.scrollHeight;
   }
 }
