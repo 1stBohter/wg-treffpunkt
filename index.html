@@ -1106,6 +1106,7 @@ const SESSION_START = new Date().toISOString();
 async function loadMessages(){
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
+    .neq('media_type','vote')
     .order('created_at',{ascending:true}).limit(100);
   if(error){ console.log('DB:',error.message);return; }
   const area=document.getElementById('messagesArea');
