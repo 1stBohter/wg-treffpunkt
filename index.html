@@ -659,7 +659,7 @@
         </div>
 
         <div class="input-toolbar">
-          <button class="toolbar-btn" onclick="toggleEmoji()">😊 <span>Emoji</span></button>
+          <button class="toolbar-btn" onclick="toggleEmoji(event)">😊 <span>Emoji</span></button>
           <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
           <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
           <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
@@ -679,7 +679,7 @@
               <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
               <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
             </div>
-            <button class="emoji-close-btn" onclick="event.stopPropagation();document.getElementById('emojiPanel').classList.remove('open');document.removeEventListener('click',closeEmojiOutside);">✕</button>
+            <button class="emoji-close-btn" onclick="event.stopPropagation();closeEmojiPanel();">✕</button>
           </div>
           <div class="emoji-grid" id="emojiGrid"></div>
         </div>
@@ -687,7 +687,7 @@
         <div class="smilie-panel" id="smiliePanel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">🎭 Chat-Smilies</span>
-            <button onclick="event.stopPropagation();document.getElementById('smiliePanel').classList.remove('open');document.removeEventListener('click',closeSmilieOutside);" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;">✕</button>
+            <button onclick="event.stopPropagation();document.getElementById('smiliePanel').classList.remove('open');" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;">✕</button>
           </div>
           <div class="smilie-grid" id="smilieGrid"></div>
         </div>
@@ -1428,43 +1428,58 @@ function onFileSelect(e){
 function clearUpload(){ pendingFile=null;document.getElementById('uploadPreview').classList.remove('show');document.getElementById('uploadThumb').innerHTML=''; }
 
 // EMOJI
+let _emojiBuilt = false;
 function buildEmojiGrid(tab){
   const grid=document.getElementById('emojiGrid');
   grid.innerHTML='';
   (EMOJIS[tab]||[]).forEach(em=>{
     const btn=document.createElement('button');btn.className='emoji-btn';btn.textContent=em;
-    btn.onclick=()=>insertEmoji(em);grid.appendChild(btn);
+    btn.onclick=(e)=>{e.stopPropagation();insertEmoji(em);};
+    grid.appendChild(btn);
   });
 }
-function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab); }
-function toggleEmoji(){
+function switchETab(tab,el){
+  document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  buildEmojiGrid(tab);
+}
+function toggleEmoji(e){
+  if(e) e.stopPropagation();
   const p=document.getElementById('emojiPanel');
-  const open=p.classList.toggle('open');
-  document.removeEventListener('click', closeEmojiOutside);
-  if(open){
+  const isOpen=p.classList.contains('open');
+  // Smilie schliessen
+  document.getElementById('smiliePanel').classList.remove('open');
+  if(isOpen){
+    p.classList.remove('open');
+  } else {
     buildEmojiGrid('smileys');
-    document.getElementById('smiliePanel').classList.remove('open');
-    document.removeEventListener('click', closeSmilieOutside);
-    setTimeout(()=>{
-      document.addEventListener('click', closeEmojiOutside);
-    }, 150);
+    // Reset active tab
+    document.querySelectorAll('.emoji-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+    p.classList.add('open');
   }
 }
-function closeEmojiOutside(e){
-  const p=document.getElementById('emojiPanel');
-  if(!p) return;
-  if(!p.contains(e.target) && !e.target.closest('.toolbar-btn')){
-    p.classList.remove('open');
-    document.removeEventListener('click', closeEmojiOutside);
-  }
+function closeEmojiPanel(){
+  document.getElementById('emojiPanel').classList.remove('open');
 }
 function insertEmoji(em){
   const inp=document.getElementById('msgInput');
-  const pos=inp.selectionStart,val=inp.value;
+  const pos=inp.selectionStart||0, val=inp.value;
   inp.value=val.slice(0,pos)+em+val.slice(pos);
   inp.selectionStart=inp.selectionEnd=pos+em.length;
   updateChar();
+  // Panel bleibt offen
 }
+// Klick ausserhalb schliesst Panel
+document.addEventListener('click',function(e){
+  const ep=document.getElementById('emojiPanel');
+  const sp=document.getElementById('smiliePanel');
+  if(ep && ep.classList.contains('open') && !ep.contains(e.target) && !e.target.closest('[onclick*="toggleEmoji"]')){
+    ep.classList.remove('open');
+  }
+  if(sp && sp.classList.contains('open') && !sp.contains(e.target) && !e.target.closest('[onclick*="toggleSmiliePanel"]')){
+    sp.classList.remove('open');
+  }
+});
 // GIF
 const GIPHY_KEY='4qqsaDpUzUenKubUbdFtGAtLrFj3RD5d';
 
