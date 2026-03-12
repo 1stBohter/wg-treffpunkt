@@ -1463,8 +1463,7 @@ function insertEmoji(em){
   const pos=inp.selectionStart,val=inp.value;
   inp.value=val.slice(0,pos)+em+val.slice(pos);
   inp.selectionStart=inp.selectionEnd=pos+em.length;
-  inp.focus();updateChar();
-  document.getElementById('emojiPanel').classList.remove('open');
+  updateChar();
 }
 // GIF
 const GIPHY_KEY='4qqsaDpUzUenKubUbdFtGAtLrFj3RD5d';
