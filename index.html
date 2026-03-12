@@ -965,6 +965,40 @@ function showError(id,msg){ const el=document.getElementById(id);el.textContent=
 async function joinAsGuest(){
   const name=document.getElementById('guestName').value.trim();
   if(!name||name.length<2) return showError('guestError','Bitte gib einen Namen ein (mind. 2 Zeichen).');
+  const nameLower = name.toLowerCase();
+
+  // Regel 1: Ist der Name ein registrierter Member?
+  // Wir prüfen ob jemand mit diesem display_name schon in auth.users existiert
+  // Da wir keinen direkten Zugriff haben, prüfen wir über messages-Tabelle: 
+  // Nachrichten die is_guest=false haben mit diesem user_name
+  const {data:memberCheck} = await sb.from('messages')
+    .select('user_name')
+    .eq('is_guest', false)
+    .ilike('user_name', name)
+    .limit(1);
+  if(memberCheck && memberCheck.length > 0){
+    return showError('guestError','❌ "'+name+'" ist ein registrierter Member-Name und kann nicht als Gast genutzt werden.');
+  }
+
+  // Regel 2: Ist der Name gerade online? (echte Presence-Prüfung)
+  const joinBtn=document.querySelector('#guestView .btn-primary');
+  if(joinBtn){joinBtn.disabled=true;joinBtn.textContent='⏳ Prüfe Name...';}
+  const onlineNames = await new Promise(resolve=>{
+    const ch=sb.channel('wg-treffpunkt-room');
+    const timer=setTimeout(()=>{ try{ch.unsubscribe();}catch(e){} resolve([]); },4000);
+    ch.on('presence',{event:'sync'},()=>{
+      clearTimeout(timer);
+      const names=Object.values(ch.presenceState()).flat().map(u=>(u.name||'').toLowerCase());
+      try{ch.unsubscribe();}catch(e){}
+      resolve(names);
+    });
+    ch.subscribe();
+  });
+  if(joinBtn){joinBtn.disabled=false;joinBtn.textContent='💬 Als Gast beitreten';}
+  if(onlineNames.includes(nameLower)){
+    return showError('guestError','❌ "'+name+'" ist gerade schon online! Bitte wähle einen anderen Namen.');
+  }
+
   // Jeder Tab bekommt seine eigene Session-ID (sessionStorage = nur dieser Tab)
   let guestId = sessionStorage.getItem('wg_guest_id');
   if(!guestId){ guestId='guest_'+Math.random().toString(36).substr(2,9); sessionStorage.setItem('wg_guest_id',guestId); }
