@@ -1762,18 +1762,18 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 
 // SESSION
 window.addEventListener('load',async()=>{
-  // Presence für Login-Badge auch ohne Login
-  sb.channel('wg-presence-public')
-    .on('presence',{event:'sync'},function(){
-      const users = Object.values(this.presenceState()).flat();
-      const badge = document.getElementById('loginOnlineBadge');
-      const count = document.getElementById('loginOnlineCount');
-      if(badge && count && document.getElementById('authOverlay')?.style.display!=='none'){
-        const n = users.length;
-        count.textContent = n;
-        badge.style.display = n > 0 ? 'flex' : 'none';
-      }
-    }).subscribe();
+  // Presence für Login-Badge: gleichen Channel tracken
+  const publicPresence = sb.channel('wg-treffpunkt-room');
+  publicPresence.on('presence',{event:'sync'},()=>{
+    const users = Object.values(publicPresence.presenceState()).flat();
+    const badge = document.getElementById('loginOnlineBadge');
+    const count = document.getElementById('loginOnlineCount');
+    if(badge && count){
+      const n = users.length;
+      count.textContent = n;
+      badge.style.display = n > 0 ? 'flex' : 'none';
+    }
+  }).subscribe();
 
   const {data}=await sb.auth.getSession();
   if(data.session){
