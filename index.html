@@ -832,8 +832,21 @@ function parseSmilies(text){
 
 function toggleSmiliePanel(){
   const p=document.getElementById('smiliePanel');
-  p.classList.toggle('open');
+  const open=p.classList.toggle('open');
   document.getElementById('emojiPanel')?.classList.remove('open');
+  document.removeEventListener('click', closeEmojiOutside);
+  if(open){
+    setTimeout(()=>{ document.addEventListener('click', closeSmilieOutside); }, 10);
+  } else {
+    document.removeEventListener('click', closeSmilieOutside);
+  }
+}
+function closeSmilieOutside(e){
+  const p=document.getElementById('smiliePanel');
+  if(p && !p.contains(e.target) && !e.target.closest('.toolbar-btn')){
+    p.classList.remove('open');
+    document.removeEventListener('click', closeSmilieOutside);
+  }
 }
 
 function buildSmiliePanel(){
@@ -1419,6 +1432,19 @@ function toggleEmoji(){
   if(open){
     buildEmojiGrid('smileys');
     document.getElementById('smiliePanel').classList.remove('open');
+    // Schließen wenn außerhalb geklickt
+    setTimeout(()=>{
+      document.addEventListener('click', closeEmojiOutside);
+    }, 10);
+  } else {
+    document.removeEventListener('click', closeEmojiOutside);
+  }
+}
+function closeEmojiOutside(e){
+  const p=document.getElementById('emojiPanel');
+  if(p && !p.contains(e.target) && !e.target.closest('.toolbar-btn')){
+    p.classList.remove('open');
+    document.removeEventListener('click', closeEmojiOutside);
   }
 }
 function insertEmoji(em){
