@@ -281,7 +281,7 @@
   .message.own .msg-time { text-align:left; } padding:10px 18px 14px;border-top:1px solid var(--border);background:rgba(19,19,26,0.9);backdrop-filter:blur(12px);flex-shrink:0;position:relative; }
 
   /* EMOJI PANEL */
-  .emoji-panel { display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;width:100%;max-width:600px;flex-direction:column;z-index:50;box-shadow:0 4px 24px rgba(0,0,0,0.5);margin-bottom:8px;overflow:hidden; }
+  .emoji-panel { position:absolute;bottom:calc(100% + 4px);left:0;right:0;display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;flex-direction:column;z-index:200;box-shadow:0 -4px 24px rgba(0,0,0,0.6);overflow:hidden; }
   .emoji-panel.open { display:flex; }
   .emoji-panel-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);flex-shrink:0; }
   .emoji-tabs { display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;align-items:center;flex:1; }
@@ -295,7 +295,7 @@
   .emoji-btn { background:none;border:none;cursor:pointer;font-size:20px;padding:5px;border-radius:8px;transition:all 0.15s;text-align:center;line-height:1; }
   .emoji-btn:hover { background:var(--surface2);transform:scale(1.2); }
   /* SMILIE PANEL */
-  .smilie-panel { display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;width:100%;max-width:600px;max-height:260px;overflow-y:auto;z-index:50;box-shadow:0 4px 24px rgba(0,0,0,0.5);margin-bottom:8px; }
+  .smilie-panel { position:absolute;bottom:calc(100% + 4px);left:0;right:0;display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;max-height:260px;overflow-y:auto;z-index:200;box-shadow:0 -4px 24px rgba(0,0,0,0.6); }
   .smilie-panel.open { display:block; }
 
 
