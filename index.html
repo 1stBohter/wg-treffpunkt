@@ -869,6 +869,7 @@ function insertSmilie(code){
   inp.value=val.slice(0,pos)+insert+val.slice(pos);
   inp.selectionStart=inp.selectionEnd=pos+insert.length;
   inp.focus();updateChar();
+  document.getElementById('smiliePanel').classList.remove('open');
 }
 
 // THEMES
@@ -1453,6 +1454,7 @@ function insertEmoji(em){
   inp.value=val.slice(0,pos)+em+val.slice(pos);
   inp.selectionStart=inp.selectionEnd=pos+em.length;
   inp.focus();updateChar();
+  document.getElementById('emojiPanel').classList.remove('open');
 }
 document.addEventListener('click',e=>{
   const p=document.getElementById('emojiPanel');
