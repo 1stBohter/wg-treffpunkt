@@ -687,7 +687,7 @@
         <div class="smilie-panel" id="smiliePanel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">🎭 Chat-Smilies</span>
-            <button onclick="event.stopPropagation();document.getElementById('smiliePanel').classList.remove('open');" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;">✕</button>
+            <button onclick="closeSmiliePanel();" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;z-index:10000;position:relative;">✕</button>
           </div>
           <div class="smilie-grid" id="smilieGrid"></div>
         </div>
@@ -1449,9 +1449,6 @@ function toggleEmoji(e){
     p.classList.add('open');
   }
 }
-function closeEmojiPanel(){
-  document.getElementById('emojiPanel').classList.remove('open');
-}
 function toggleSmiliePanel(e){
   if(e) e.stopPropagation();
   const p=document.getElementById('smiliePanel');
@@ -1472,6 +1469,14 @@ function insertEmoji(em){
   inp.value=val.slice(0,pos)+em+val.slice(pos);
   inp.selectionStart=inp.selectionEnd=pos+em.length;
   updateChar();
+}
+function closeSmiliePanel(){
+  const sp=document.getElementById('smiliePanel');
+  if(sp){ sp.classList.remove('open'); sp.style.display='none'; }
+}
+function closeEmojiPanel(){
+  const ep=document.getElementById('emojiPanel');
+  if(ep){ ep.classList.remove('open'); ep.style.display='none'; }
 }
 document.addEventListener('click',function(e){
   const ep=document.getElementById('emojiPanel');
