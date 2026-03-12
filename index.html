@@ -360,6 +360,44 @@
   .vote-voters span.vote-a { border-color:#22c55e;color:#22c55e; }
   .vote-voters span.vote-b { border-color:#ef4444;color:#ef4444; }
 
+  /* PINNWAND */
+  .pinboard-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:flex-start;justify-content:center;z-index:300;padding-top:60px;animation:fadeIn 0.2s ease; }
+  .pinboard-overlay.open { display:flex; }
+  .pinboard-modal { background:var(--surface);border:1px solid var(--border);border-radius:20px;width:680px;max-width:96vw;max-height:80vh;display:flex;flex-direction:column;animation:slideUp 0.25s ease;overflow:hidden; }
+  .pinboard-header { display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0; }
+  .pinboard-header h2 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent); }
+  .pinboard-tabs { display:flex;gap:6px; }
+  .pinboard-tab { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-muted);transition:all 0.2s;font-family:'DM Sans',sans-serif; }
+  .pinboard-tab.active { background:var(--accent);color:#0a0a0f;border-color:var(--accent); }
+  .pinboard-close { background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;padding:0 4px;transition:color 0.2s;line-height:1; }
+  .pinboard-close:hover { color:var(--text); }
+  .pinboard-body { flex:1;overflow-y:auto;padding:18px 22px; }
+  .pinboard-body::-webkit-scrollbar { width:3px; }
+  .pinboard-body::-webkit-scrollbar-thumb { background:var(--border); }
+
+  .pinboard-form { background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:18px; }
+  .pinboard-form input,.pinboard-form textarea { width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;margin-bottom:8px; }
+  .pinboard-form input:focus,.pinboard-form textarea:focus { border-color:var(--accent2); }
+  .pinboard-form textarea { resize:vertical;min-height:70px; }
+  .pinboard-form-row { display:flex;gap:8px;align-items:center; }
+  .pinboard-form input[type="date"] { flex:1;color-scheme:dark; }
+  .btn-pin { background:var(--accent);color:#0a0a0f;border:none;border-radius:10px;padding:10px 20px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;white-space:nowrap; }
+  .btn-pin:hover { background:#d4ff20; }
+
+  .pin-card { background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative;animation:popIn 0.2s ease; }
+  .pin-card:hover { border-color:var(--accent2); }
+  .pin-card-header { display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px; }
+  .pin-card-title { font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text); }
+  .pin-card-date { display:inline-block;background:rgba(200,255,0,0.12);border:1px solid rgba(200,255,0,0.3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px; }
+  .pin-card-content { font-size:13px;color:var(--text-muted);line-height:1.5;white-space:pre-wrap; }
+  .pin-card-footer { display:flex;align-items:center;justify-content:space-between;margin-top:8px; }
+  .pin-card-meta { font-size:11px;color:var(--text-muted); }
+  .pin-card-actions { display:flex;gap:4px; }
+  .pin-action-btn { background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-muted);transition:all 0.15s; }
+  .pin-action-btn:hover { color:var(--text);border-color:var(--text-muted); }
+  .pin-action-btn.delete:hover { color:#ef4444;border-color:#ef4444; }
+  .pin-empty { text-align:center;padding:40px;color:var(--text-muted);font-size:14px; }
+
   /* LIGHTBOX */
   .lightbox { position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out; }
   .lightbox.open { display:flex; }
@@ -431,6 +469,7 @@
 
   <!-- LOGIN MODAL RECHTS -->
   <div class="modal-panel">
+  <div class="online-badge" id="loginOnlineBadge" style="position:absolute;top:20px;right:20px;display:none"><div class="online-badge-dot"></div><span id="loginOnlineCount">0</span> im Chat</div>
   <div class="modal">
     <div class="modal-logo">WG-Treffpunkt</div>
     <div class="modal-subtitle">Trete dem Chat bei – anonym oder mit Account</div>
@@ -510,6 +549,36 @@
   </div><!-- end modal-panel -->
 </div>
 
+<!-- PINNWAND MODAL -->
+<div class="pinboard-overlay" id="pinboardOverlay" onclick="closePinboardOutside(event)">
+  <div class="pinboard-modal">
+    <div class="pinboard-header">
+      <h2>📌 Pinnwand</h2>
+      <div class="pinboard-tabs">
+        <button class="pinboard-tab active" onclick="switchPinTab('all',this)">Alle</button>
+        <button class="pinboard-tab" onclick="switchPinTab('note',this)">📝 Notizen</button>
+        <button class="pinboard-tab" onclick="switchPinTab('date',this)">📅 Termine</button>
+      </div>
+      <button class="pinboard-close" onclick="closePinboard()">✕</button>
+    </div>
+    <div class="pinboard-body">
+      <div class="pinboard-form">
+        <div class="pinboard-form-row" style="margin-bottom:8px">
+          <button class="pinboard-tab active" id="formTabNote" onclick="switchFormType('note')">📝 Notiz</button>
+          <button class="pinboard-tab" id="formTabDate" onclick="switchFormType('date')">📅 Termin</button>
+        </div>
+        <input type="text" id="pinTitle" placeholder="Titel...">
+        <textarea id="pinContent" placeholder="Inhalt / Beschreibung..."></textarea>
+        <div class="pinboard-form-row">
+          <input type="date" id="pinDate" style="display:none;flex:1">
+          <button class="btn-pin" onclick="addPinEntry()">📌 Pinnen</button>
+        </div>
+      </div>
+      <div id="pinEntries"></div>
+    </div>
+  </div>
+</div>
+
 <!-- VOTE MODAL -->
 <div class="vote-modal-overlay" id="voteModalOverlay">
   <div class="vote-modal">
@@ -545,6 +614,7 @@
     <div class="header-right">
       <div class="header-controls">
         <button class="ctrl-btn" onclick="toggleTheme()" id="themeBtn" title="Hell/Dunkel">🌙</button>
+        <button class="ctrl-btn" onclick="openPinboard()" title="Pinnwand">📌</button>
         <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
       </div>
       <div class="user-chip">
@@ -932,6 +1002,7 @@ async function logout(){
 function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
 
 function startApp(){
+  playLoginSound();
   document.getElementById('authOverlay').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   const t=theme(currentUser.colorIndex);
@@ -948,6 +1019,7 @@ function startApp(){
   loadMessages();
   subscribeMessages();
   subscribeVotes();
+  subscribePinboard();
 }
 
 // MESSAGES
@@ -1209,6 +1281,14 @@ function subscribeMessages(){
 }
 
 function renderOnlineUsers(users){
+  // Zähler auf Login-Seite updaten
+  const badge = document.getElementById('loginOnlineBadge');
+  const count = document.getElementById('loginOnlineCount');
+  if(badge && count){
+    const n = users.length;
+    count.textContent = n;
+    badge.style.display = n > 0 ? 'flex' : 'none';
+  }
   const list=document.getElementById('onlineList');
   list.innerHTML='';
   users.forEach(u=>{
@@ -1530,12 +1610,171 @@ function subscribeVotes(){
   // Wird jetzt im Haupt-Channel subscribeMessages() gemacht
 }
 
+
+
+// LOGIN SOUND
+function playLoginSound(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime+0.3);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.4);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.4);
+  }catch(e){}
+}
+
+// ===================== PINNWAND =====================
+let pinCurrentTab = 'all';
+let pinFormType = 'note';
+let pinEditId = null;
+
+function openPinboard(){
+  document.getElementById('pinboardOverlay').classList.add('open');
+  loadPinEntries();
+}
+function closePinboard(){
+  document.getElementById('pinboardOverlay').classList.remove('open');
+  resetPinForm();
+}
+function closePinboardOutside(e){
+  if(e.target===document.getElementById('pinboardOverlay')) closePinboard();
+}
+
+function switchPinTab(tab, btn){
+  pinCurrentTab = tab;
+  document.querySelectorAll('.pinboard-header .pinboard-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadPinEntries();
+}
+
+function switchFormType(type){
+  pinFormType = type;
+  document.getElementById('formTabNote').classList.toggle('active', type==='note');
+  document.getElementById('formTabDate').classList.toggle('active', type==='date');
+  document.getElementById('pinDate').style.display = type==='date' ? 'block' : 'none';
+}
+
+function resetPinForm(){
+  pinEditId = null;
+  document.getElementById('pinTitle').value = '';
+  document.getElementById('pinContent').value = '';
+  document.getElementById('pinDate').value = '';
+  document.querySelector('.btn-pin').textContent = '📌 Pinnen';
+}
+
+async function addPinEntry(){
+  const title = document.getElementById('pinTitle').value.trim();
+  const content2 = document.getElementById('pinContent').value.trim();
+  const date = document.getElementById('pinDate').value;
+  if(!title) return;
+
+  if(pinEditId){
+    await sb.from('pinboard').update({
+      title, content:content2, date:date||null, type:pinFormType
+    }).eq('id', pinEditId);
+    pinEditId = null;
+  } else {
+    await sb.from('pinboard').insert({
+      type: pinFormType,
+      title,
+      content: content2,
+      date: date||null,
+      user_name: currentUser.name
+    });
+  }
+  resetPinForm();
+  loadPinEntries();
+}
+
+async function deletePinEntry(id){
+  if(!confirm('Eintrag löschen?')) return;
+  await sb.from('pinboard').delete().eq('id', id);
+  loadPinEntries();
+}
+
+async function editPinEntry(id){
+  const {data} = await sb.from('pinboard').select('*').eq('id',id).single();
+  if(!data) return;
+  pinEditId = id;
+  switchFormType(data.type||'note');
+  document.getElementById('pinTitle').value = data.title||'';
+  document.getElementById('pinContent').value = data.content||'';
+  document.getElementById('pinDate').value = data.date||'';
+  document.querySelector('.btn-pin').textContent = '💾 Speichern';
+  document.getElementById('pinTitle').focus();
+}
+
+async function loadPinEntries(){
+  let query = sb.from('pinboard').select('*').order('date',{ascending:true}).order('created_at',{ascending:false});
+  if(pinCurrentTab !== 'all') query = query.eq('type', pinCurrentTab);
+  const {data} = await query;
+  renderPinEntries(data||[]);
+}
+
+function renderPinEntries(entries){
+  const container = document.getElementById('pinEntries');
+  if(!entries.length){
+    container.innerHTML = '<div class="pin-empty">Noch nichts gepinnt 📌</div>';
+    return;
+  }
+  container.innerHTML = entries.map(e=>{
+    const dateStr = e.date ? `<div class="pin-card-date">📅 ${formatPinDate(e.date)}</div>` : '';
+    const contentStr = e.content ? `<div class="pin-card-content">${esc(e.content)}</div>` : '';
+    return `<div class="pin-card">
+      <div class="pin-card-header">
+        <div class="pin-card-title">${e.type==='note'?'📝':'📅'} ${esc(e.title)}</div>
+      </div>
+      ${dateStr}
+      ${contentStr}
+      <div class="pin-card-footer">
+        <div class="pin-card-meta">von ${esc(e.user_name)} · ${timeStr(e.created_at)}</div>
+        <div class="pin-card-actions">
+          <button class="pin-action-btn" onclick="editPinEntry(${e.id})">✏️ Bearbeiten</button>
+          <button class="pin-action-btn delete" onclick="deletePinEntry(${e.id})">🗑️ Löschen</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function formatPinDate(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'long',year:'numeric'});
+}
+
+// Pinnwand Realtime
+function subscribePinboard(){
+  sb.channel('pinboard-channel')
+    .on('postgres_changes',{event:'*',schema:'public',table:'pinboard'},()=>{
+      if(document.getElementById('pinboardOverlay').classList.contains('open')) loadPinEntries();
+    }).subscribe();
+}
+// ===================== ENDE PINNWAND =====================
+
 // LIGHTBOX
 function openLB(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 
 // SESSION
 window.addEventListener('load',async()=>{
+  // Presence für Login-Badge auch ohne Login
+  sb.channel('wg-presence-public')
+    .on('presence',{event:'sync'},function(){
+      const users = Object.values(this.presenceState()).flat();
+      const badge = document.getElementById('loginOnlineBadge');
+      const count = document.getElementById('loginOnlineCount');
+      if(badge && count && document.getElementById('authOverlay')?.style.display!=='none'){
+        const n = users.length;
+        count.textContent = n;
+        badge.style.display = n > 0 ? 'flex' : 'none';
+      }
+    }).subscribe();
+
   const {data}=await sb.auth.getSession();
   if(data.session){
     const u=data.session.user,m=u.user_metadata;
