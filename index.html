@@ -654,8 +654,8 @@
           <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
         </div>
 
-        <div style="text-align:center;margin-bottom:6px;">
-          <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;"></span>
+        <div id="watermarkWrap" style="text-align:center;margin-bottom:6px;min-height:0;">
+          <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;display:none;"></span>
         </div>
 
         <div class="input-toolbar">
@@ -679,7 +679,7 @@
               <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
               <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
             </div>
-            <button class="emoji-close-btn" onclick="document.getElementById('emojiPanel').classList.remove('open')">✕</button>
+            <button class="emoji-close-btn" onclick="event.stopPropagation();document.getElementById('emojiPanel').classList.remove('open');document.removeEventListener('click',closeEmojiOutside);">✕</button>
           </div>
           <div class="emoji-grid" id="emojiGrid"></div>
         </div>
@@ -687,7 +687,7 @@
         <div class="smilie-panel" id="smiliePanel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">🎭 Chat-Smilies</span>
-            <button onclick="document.getElementById('smiliePanel').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;">✕</button>
+            <button onclick="event.stopPropagation();document.getElementById('smiliePanel').classList.remove('open');document.removeEventListener('click',closeSmilieOutside);" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;">✕</button>
           </div>
           <div class="smilie-grid" id="smilieGrid"></div>
         </div>
@@ -1035,7 +1035,7 @@ function startApp(){
   if(t){ av.style.background=t.av; av.style.color=t.tx; }
   else { av.style.background='rgba(55,65,81,0.5)'; }
   document.getElementById('headerName').textContent=currentUser.name;
-  document.getElementById('userWatermark').textContent=currentUser.name;
+  const wm=document.getElementById('userWatermark');wm.textContent=currentUser.name;wm.style.display='inline';
   const roleEl=document.getElementById('headerRole');
   if(roleEl) roleEl.textContent=currentUser.isGuest?'👤 Gast':'⭐ Member';
   const msgInput=document.getElementById('msgInput');
@@ -1453,7 +1453,7 @@ function toggleEmoji(){
 function closeEmojiOutside(e){
   const p=document.getElementById('emojiPanel');
   if(!p) return;
-  if(!p.contains(e.target)){
+  if(!p.contains(e.target) && !e.target.closest('.toolbar-btn')){
     p.classList.remove('open');
     document.removeEventListener('click', closeEmojiOutside);
   }
