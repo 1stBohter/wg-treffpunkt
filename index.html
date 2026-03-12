@@ -639,25 +639,6 @@
 
             <div class="input-area">
 
-        <div class="emoji-panel" id="emojiPanel">
-          <div class="emoji-tabs">
-            <button class="emoji-tab active" onclick="switchETab('smileys',this)">😀</button>
-            <button class="emoji-tab" onclick="switchETab('hearts',this)">❤️</button>
-            <button class="emoji-tab" onclick="switchETab('hands',this)">👋</button>
-            <button class="emoji-tab" onclick="switchETab('nature',this)">🌿</button>
-            <button class="emoji-tab" onclick="switchETab('food',this)">🍕</button>
-            <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
-            <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
-            <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
-          </div>
-          <div class="emoji-grid" id="emojiGrid"></div>
-        </div>
-
-        <div class="smilie-panel" id="smiliePanel">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎭 Chat-Smilies – einfach :code tippen!</div>
-          <div class="smilie-grid" id="smilieGrid"></div>
-        </div>
-
         <div class="upload-preview" id="uploadPreview">
           <div id="uploadThumb"></div>
           <div class="upload-preview-name" id="uploadName"></div>
@@ -1804,5 +1785,25 @@ window.addEventListener('load',async()=>{
 // ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to text;
 // ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to_name text;
 </script>
+
+<div class="emoji-panel" id="emojiPanel">
+  <div class="emoji-tabs">
+    <button class="emoji-tab active" onclick="switchETab('smileys',this)">😀</button>
+    <button class="emoji-tab" onclick="switchETab('hearts',this)">❤️</button>
+    <button class="emoji-tab" onclick="switchETab('hands',this)">👋</button>
+    <button class="emoji-tab" onclick="switchETab('nature',this)">🌿</button>
+    <button class="emoji-tab" onclick="switchETab('food',this)">🍕</button>
+    <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
+    <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
+    <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
+  </div>
+  <div class="emoji-grid" id="emojiGrid"></div>
+</div>
+
+<div class="smilie-panel" id="smiliePanel">
+  <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎭 Chat-Smilies – einfach :code tippen!</div>
+  <div class="smilie-grid" id="smilieGrid"></div>
+</div>
+
 </body>
 </html>
