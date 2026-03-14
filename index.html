@@ -894,6 +894,7 @@ const EMOJIS = {
 };
 
 let currentUser = null, subscription = null, pendingFile = null;
+const knebelList = {}; // { name_lowercase: timestamp_until }
 let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
 let whisperTarget = null; // { id, name }
 
@@ -1386,6 +1387,12 @@ async function sendMessage(){
     const handled = await handleCommand(content);
     if(handled){ input.value=''; updateChar(); return; }
   }
+  // Geknebelt?
+  if(knebelList[currentUser.name.toLowerCase()]){
+    const remaining = Math.ceil((knebelList[currentUser.name.toLowerCase()] - Date.now()) / 60000);
+    if(remaining > 0){ showChatInfo('🔇 Du bist noch ' + remaining + ' Minute(n) geknebelt!'); return; }
+    else { delete knebelList[currentUser.name.toLowerCase()]; }
+  }
   if(!content&&!pendingFile) return;
   let media_url=null,media_type=null;
   if(pendingFile){
@@ -1449,8 +1456,50 @@ async function handleCommand(content){
     return true;
   }
 
+  // /knebel NAME [MINUTEN] - nur Admin
+  if(cmd === '/knebel'){
+    if(!currentUser.isAdmin){ showChatInfo('❌ Nur Admins dürfen diesen Befehl nutzen.'); return true; }
+    const nameParts = parts.slice(1);
+    let minutes = 1;
+    let targetName = arg;
+    const lastPart = nameParts[nameParts.length-1];
+    if(nameParts.length > 1 && !isNaN(lastPart)){
+      minutes = Math.min(5, Math.max(1, parseInt(lastPart)));
+      targetName = nameParts.slice(0,-1).join(' ').trim();
+    }
+    if(!targetName){ showChatInfo('❌ Bitte einen Namen angeben: /knebel Name [1-5 Minuten]'); return true; }
+    knebelList[targetName.toLowerCase()] = Date.now() + minutes * 60000;
+    showChatInfo('🔇 ' + targetName + ' ist für ' + minutes + ' Minute(n) geknebelt!');
+    setTimeout(()=>{ delete knebelList[targetName.toLowerCase()]; showChatInfo('🔊 ' + targetName + ' ist wieder frei!'); }, minutes * 60000);
+    return true;
+  }
+
+  // /unknebel NAME - nur Admin
+  if(cmd === '/unknebel'){
+    if(!currentUser.isAdmin){ showChatInfo('❌ Nur Admins dürfen diesen Befehl nutzen.'); return true; }
+    if(!arg){ showChatInfo('❌ Bitte einen Namen angeben: /unknebel Name'); return true; }
+    delete knebelList[arg.toLowerCase()];
+    showChatInfo('🔊 ' + arg + ' wurde entknebelt!');
+    return true;
+  }
+
+  // /wuerfel - jeder darf das
+  if(cmd === '/würfel' || cmd === '/wuerfel'){
+    const zahl = Math.floor(Math.random() * 6) + 1;
+    const faces = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+    await sb.from('messages').insert({
+      content: currentUser.name + ' würfelt eine ' + zahl + ' ' + faces[zahl],
+      user_id: currentUser.id, user_name: currentUser.name,
+      is_guest: currentUser.isGuest,
+      color_index: currentUser.isGuest ? null : (currentUser.colorIndex ?? 0),
+      avatar: currentUser.avatar || null
+    });
+    return true;
+  }
+
   return false; // Befehl nicht erkannt - normal senden
 }
+
 
 function showChatInfo(msg){
   const area = document.getElementById('messagesArea');
