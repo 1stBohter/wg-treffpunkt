@@ -1316,7 +1316,7 @@ function subscribeMessages(){
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
         online_at: new Date().toISOString()
-      });
+      }, { presenceKey: currentUser.id });
     }
   });
   
@@ -1324,17 +1324,22 @@ function subscribeMessages(){
 }
 
 function renderOnlineUsers(users){
-  // Zähler auf Login-Seite updaten
+  // Duplikate entfernen - gleicher Name nur einmal
+  const seen = new Set();
+  const unique = users.filter(u => {
+    const key = (u.name||'').toLowerCase();
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
   const badge = document.getElementById('loginOnlineBadge');
   const count = document.getElementById('loginOnlineCount');
   if(badge && count){
-    const n = users.length;
-    count.textContent = n;
-    badge.style.display = n > 0 ? 'flex' : 'none';
+    count.textContent = unique.length;
+    badge.style.display = unique.length > 0 ? 'flex' : 'none';
   }
   const list=document.getElementById('onlineList');
   list.innerHTML='';
-  users.forEach(u=>{
+  unique.forEach(u=>{
     const t=u.color!==null&&u.color!==undefined?THEMES[u.color]:null;
     const avStyle=t?`background:${t.av};color:${t.tx}`:`background:linear-gradient(135deg,#374151,#6b7280)`;
     const isMe = u.name===currentUser.name;
@@ -1347,7 +1352,7 @@ function renderOnlineUsers(users){
     list.appendChild(div);
   });
   const title=document.querySelector('.online-sidebar-title');
-  if(title) title.textContent=`👥 Online (${users.length})`;
+  if(title) title.textContent=`👥 Online (${unique.length})`;
 }
 
 // ===== FLÜSTERN =====
