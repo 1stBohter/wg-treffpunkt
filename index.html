@@ -1316,7 +1316,7 @@ function subscribeMessages(){
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
         online_at: new Date().toISOString()
-      }, { presenceKey: currentUser.id });
+      });
     }
   });
   
@@ -1953,14 +1953,9 @@ function subscribePinboard(){
 function openLB(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 
-// SESSION
-window.addEventListener('load',async()=>{
-  const {data}=await sb.auth.getSession();
-  if(data.session){
-    const u=data.session.user,m=u.user_metadata;
-    currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
-    startApp();
-  }
+// SESSION - immer Login-Screen zeigen, kein Auto-Login
+window.addEventListener('load', async()=>{
+  await sb.auth.signOut();
 });
 
 // Add avatar column to messages table if needed
