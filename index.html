@@ -46,6 +46,7 @@
   .residents-building {
     position:absolute;inset:0;
     background:url("https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Chat_neu_2.jpg") center/cover no-repeat;
+    transition: background 0.5s ease;
     z-index:0;
   }
   .residents-building::after {
@@ -455,7 +456,7 @@
 
   <!-- MITBEWOHNER PANEL LINKS -->
   <div class="residents-panel">
-    <div class="residents-building"></div>
+    <div class="residents-building" id="loginBg"></div>
     <div class="building-badge">
       <div class="building-badge-title">WG-Treffpunkt</div>
       <div class="building-badge-sub">WG-Projekt Köln</div>
@@ -1497,6 +1498,24 @@ async function handleCommand(content){
     return true;
   }
 
+  // /hintergrund URL - nur Admin
+  if(cmd === '/hintergrund'){
+    if(!currentUser.isAdmin){ showChatInfo('❌ Nur Admins dürfen den Hintergrund ändern.'); return true; }
+    const url = arg.trim();
+    if(!url){ showChatInfo('❌ Bitte eine URL angeben: /hintergrund https://...'); return true; }
+    await sb.from('settings').upsert({key:'login_background', value:url});
+    showChatInfo('✅ Hintergrundbild wurde geändert!');
+    return true;
+  }
+
+  // /hintergrund reset - zurück zum Original
+  if(cmd === '/hintergrund-reset'){
+    if(!currentUser.isAdmin){ showChatInfo('❌ Nur Admins dürfen das.'); return true; }
+    await sb.from('settings').upsert({key:'login_background', value:''});
+    showChatInfo('✅ Hintergrundbild zurückgesetzt!');
+    return true;
+  }
+
   // /wuerfel - jeder darf das
   if(cmd === '/würfel' || cmd === '/wuerfel'){
     const zahl = Math.floor(Math.random() * 6) + 1;
@@ -2005,7 +2024,30 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 // SESSION - immer Login-Screen zeigen, kein Auto-Login
 window.addEventListener('load', async()=>{
   await sb.auth.signOut();
+  loadBackground();
 });
+
+// HINTERGRUND
+const DEFAULT_BG = 'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Chat_neu_2.jpg';
+
+function setBackground(url){
+  const el = document.getElementById('loginBg');
+  if(!el) return;
+  const bg = (url && url.trim()) ? url.trim() : DEFAULT_BG;
+  el.style.backgroundImage = 'url("' + bg + '")';
+  el.style.backgroundSize = 'cover';
+  el.style.backgroundPosition = 'center';
+}
+
+async function loadBackground(){
+  const {data} = await sb.from('settings').select('value').eq('key','login_background').maybeSingle();
+  setBackground(data ? data.value : '');
+  sb.channel('settings-channel')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},payload=>{
+      if(payload.new.key === 'login_background') setBackground(payload.new.value);
+    })
+    .subscribe();
+}
 
 // Add avatar column to messages table if needed
 // Supabase SQL (einmalig ausführen):
