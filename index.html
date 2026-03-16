@@ -496,8 +496,8 @@
     <div id="loginView" style="display:none">
       <h2>Willkommen zurück</h2>
       <div class="input-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="deine@email.com">
+        <label>Chat-Name</label>
+        <input type="text" id="loginName" placeholder="Dein Chat-Name" maxlength="30">
       </div>
       <div class="input-group">
         <label>Passwort</label>
@@ -1008,13 +1008,16 @@ async function joinAsGuest(){
 }
 
 async function login(){
-  const email=document.getElementById('loginEmail').value.trim();
+  const chatname=document.getElementById('loginName').value.trim();
   const pass=document.getElementById('loginPassword').value;
-  if(!email||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
-  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error) return showError('loginError','Login fehlgeschlagen: '+error.message);
+  if(!chatname||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
+  // Email anhand Chatname nachschlagen
+  const {data:member,error:me}=await sb.from('members').select('email').ilike('display_name',chatname).maybeSingle();
+  if(me||!member) return showError('loginError','❌ Chat-Name "'+chatname+'" nicht gefunden.');
+  const {data,error}=await sb.auth.signInWithPassword({email:member.email,password:pass});
+  if(error) return showError('loginError','Login fehlgeschlagen: Falsches Passwort?');
   const m=data.user.user_metadata;
-  currentUser={name:m.display_name||email.split('@')[0],isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:m.is_admin===true};
+  currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:m.is_admin===true};
   startApp();
 }
 
