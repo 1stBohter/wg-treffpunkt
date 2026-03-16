@@ -1062,6 +1062,7 @@ function startApp(){
   subscribeMessages();
   subscribeVotes();
   subscribePinboard();
+  subscribeGagged();
 }
 
 // MESSAGES
@@ -1393,10 +1394,9 @@ async function sendMessage(){
     if(handled){ input.value=''; updateChar(); return; }
   }
   // Geknebelt?
-  if(knebelList[currentUser.name.toLowerCase()]){
-    const remaining = Math.ceil((knebelList[currentUser.name.toLowerCase()] - Date.now()) / 60000);
-    if(remaining > 0){ showChatInfo('🔇 Du bist noch ' + remaining + ' Minute(n) geknebelt!'); return; }
-    else { delete knebelList[currentUser.name.toLowerCase()]; }
+  if(window.isGagged){
+    showChatInfo('🔇 Du bist geknebelt und kannst gerade nicht schreiben!');
+    return;
   }
   if(!content&&!pendingFile) return;
   let media_url=null,media_type=null;
@@ -1473,9 +1473,12 @@ async function handleCommand(content){
       targetName = nameParts.slice(0,-1).join(' ').trim();
     }
     if(!targetName){ showChatInfo('❌ Bitte einen Namen angeben: /knebel Name [1-5 Minuten]'); return true; }
-    knebelList[targetName.toLowerCase()] = Date.now() + minutes * 60000;
+    const until = new Date(Date.now() + minutes * 60000).toISOString();
+    // Alten Eintrag löschen falls vorhanden
+    await sb.from('gagged_users').delete().ilike('user_name', targetName);
+    const {error: ge} = await sb.from('gagged_users').insert({user_name: targetName, gagged_until: until});
+    if(ge){ showChatInfo('❌ Fehler beim Knebeln: ' + ge.message); return true; }
     showChatInfo('🔇 ' + targetName + ' ist für ' + minutes + ' Minute(n) geknebelt!');
-    setTimeout(()=>{ delete knebelList[targetName.toLowerCase()]; showChatInfo('🔊 ' + targetName + ' ist wieder frei!'); }, minutes * 60000);
     return true;
   }
 
@@ -1483,7 +1486,7 @@ async function handleCommand(content){
   if(cmd === '/unknebel'){
     if(!currentUser.isAdmin){ showChatInfo('❌ Nur Admins dürfen diesen Befehl nutzen.'); return true; }
     if(!arg){ showChatInfo('❌ Bitte einen Namen angeben: /unknebel Name'); return true; }
-    delete knebelList[arg.toLowerCase()];
+    await sb.from('gagged_users').delete().ilike('user_name', arg);
     showChatInfo('🔊 ' + arg + ' wurde entknebelt!');
     return true;
   }
@@ -1941,6 +1944,46 @@ function formatPinDate(dateStr){
 }
 
 // Pinnwand Realtime
+function subscribeGagged(){
+  // Beim Start prüfen ob User bereits geknebelt ist
+  sb.from('gagged_users')
+    .select('gagged_until')
+    .ilike('user_name', currentUser.name)
+    .gt('gagged_until', new Date().toISOString())
+    .maybeSingle()
+    .then(({data})=>{
+      if(data){
+        window.isGagged = true;
+        const remaining = Math.ceil((new Date(data.gagged_until) - Date.now()) / 60000);
+        showChatInfo('🔇 Du bist noch ' + remaining + ' Minute(n) geknebelt!');
+        const ms = new Date(data.gagged_until) - Date.now();
+        if(ms > 0) setTimeout(()=>{ window.isGagged=false; showChatInfo('🔊 Du bist wieder frei!'); }, ms);
+      }
+    });
+  // Realtime: neue Einträge
+  sb.channel('gagged-channel')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'gagged_users'},payload=>{
+      if(payload.new.user_name.toLowerCase()===currentUser.name.toLowerCase()){
+        window.isGagged=true;
+        const remaining=Math.ceil((new Date(payload.new.gagged_until)-Date.now())/60000);
+        showChatInfo('🔇 Du wurdest für '+remaining+' Minute(n) geknebelt!');
+        const ms=new Date(payload.new.gagged_until)-Date.now();
+        if(ms>0) setTimeout(()=>{
+          window.isGagged=false;
+          showChatInfo('🔊 Du bist wieder frei!');
+          sb.from('gagged_users').delete().ilike('user_name',currentUser.name).then(()=>{});
+        },ms);
+      }
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'gagged_users'},payload=>{
+      if((payload.old.user_name||'').toLowerCase()===currentUser.name.toLowerCase()){
+        window.isGagged=false;
+        showChatInfo('🔊 Du wurdest entknebelt!');
+      }
+    })
+    .subscribe();
+}
+
 function subscribePinboard(){
   sb.channel('pinboard-channel')
     .on('postgres_changes',{event:'*',schema:'public',table:'pinboard'},()=>{
