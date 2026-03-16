@@ -221,6 +221,14 @@
   /* INPUT AREA */
   .input-area { position:relative;padding:12px 18px 10px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0; }
 
+  /* DATENSCHUTZ HINWEIS */
+  #privacyModal { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center; }
+  #privacyModal.hidden { display:none; }
+  .privacy-box { background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center; }
+  .privacy-box h3 { font-size:18px;font-weight:700;margin-bottom:12px;color:var(--text); }
+  .privacy-box p { font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:24px; }
+  .privacy-box .btn-primary { width:100%;padding:12px; }
+
   /* CUSTOM SMILIES */
   .smilie-panel::-webkit-scrollbar { width:3px; }
   .smilie-panel::-webkit-scrollbar-thumb { background:var(--border); }
@@ -452,6 +460,16 @@
 </style>
 </head>
 <body>
+
+<!-- DATENSCHUTZ HINWEIS -->
+<div id="privacyModal" class="hidden">
+  <div class="privacy-box">
+    <h3>👋 Willkommen im WG-Treffpunkt!</h3>
+    <p>Diese Seite ist <strong>privat</strong> und nur für eingeladene Personen bestimmt.<br><br>
+    Nachrichten und Inhalte werden gespeichert. Mit der Nutzung stimmst du zu.</p>
+    <button class="btn-primary" onclick="acceptPrivacy()">✅ Verstanden – weiter</button>
+  </div>
+</div>
 
 <!-- AUTH -->
 <div class="overlay" id="authOverlay">
@@ -2023,10 +2041,23 @@ function subscribePinboard(){
 function openLB(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 
+// DATENSCHUTZ
+function acceptPrivacy(){
+  localStorage.setItem('wg_privacy_accepted','1');
+  document.getElementById('privacyModal').classList.add('hidden');
+}
+
+function checkPrivacy(){
+  if(!localStorage.getItem('wg_privacy_accepted')){
+    document.getElementById('privacyModal').classList.remove('hidden');
+  }
+}
+
 // SESSION - immer Login-Screen zeigen, kein Auto-Login
 window.addEventListener('load', async()=>{
   await sb.auth.signOut();
   loadBackground();
+  checkPrivacy();
 });
 
 // HINTERGRUND
