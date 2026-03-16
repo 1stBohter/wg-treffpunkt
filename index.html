@@ -894,6 +894,7 @@ const EMOJIS = {
 };
 
 let currentUser = null, subscription = null, pendingFile = null;
+const SUPERADMINS = ['pampersbengel_oleg']; // Diese Namen können nicht entfernt werden
 const knebelList = {}; // { name_lowercase: timestamp_until }
 let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
 let whisperTarget = null; // { id, name }
@@ -1440,6 +1441,7 @@ async function handleCommand(content){
   if(cmd === '/makeadmin'){
     if(!currentUser.isAdmin) return showChatInfo('❌ Nur Admins dürfen diesen Befehl nutzen.'), true;
     if(!arg) return showChatInfo('❌ Bitte einen Namen angeben: /makeadmin Name'), true;
+    if(SUPERADMINS.includes(arg.toLowerCase()) && !SUPERADMINS.includes(currentUser.name.toLowerCase())) return showChatInfo('❌ Superadmin-Rechte können nur von einem Superadmin vergeben werden!'), true;
     const {data,error} = await sb.auth.admin.listUsers();
     // Wir nutzen stattdessen die user_metadata über messages
     const {data:msgs} = await sb.from('messages').select('user_id,user_name').eq('user_name',arg).eq('is_guest',false).limit(1);
@@ -1455,6 +1457,7 @@ async function handleCommand(content){
   if(cmd === '/makeunadmin'){
     if(!currentUser.isAdmin) return showChatInfo('❌ Nur Admins dürfen diesen Befehl nutzen.'), true;
     if(!arg) return showChatInfo('❌ Bitte einen Namen angeben: /makeunadmin Name'), true;
+    if(SUPERADMINS.includes(arg.toLowerCase())) return showChatInfo('❌ Dieser Admin kann nicht entfernt werden!'), true;
     const {data:msgs} = await sb.from('messages').select('user_id,user_name').eq('user_name',arg).eq('is_guest',false).limit(1);
     if(!msgs||msgs.length===0) return showChatInfo('❌ Kein registrierter User "'+arg+'" gefunden.'), true;
     const uid = msgs[0].user_id;
