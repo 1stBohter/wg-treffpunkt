@@ -252,6 +252,10 @@
   .action-react:hover { color:var(--accent);border-color:var(--accent) !important; }
 
   .header { display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.9);backdrop-filter:blur(12px);flex-shrink:0;z-index:10; }
+  .room-selector { display:flex;align-items:center;gap:8px;margin-left:16px; }
+  .room-select { background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;cursor:pointer;outline:none; }
+  .room-select:focus { border-color:#c8ff00; }
+  .room-badge { font-size:11px;font-weight:700;color:#c8ff00;text-transform:uppercase;letter-spacing:0.5px; }
   .header-left { display:flex;align-items:center;gap:14px; }
   .logo { font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--accent);letter-spacing:-0.5px; }
   .online-badge { display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--online); }
@@ -635,6 +639,13 @@
         <div class="online-dot"></div>
         <span>Chat aktiv</span>
       </div>
+      <div class="room-selector">
+        <span class="room-badge">📍</span>
+        <select class="room-select" id="roomSelect" onchange="switchRoom(this.value)">
+          <option value="hauptchat">🏠 Hauptchat</option>
+          <option value="spielzimmer">🎮 Spielzimmer</option>
+        </select>
+      </div>
     </div>
     <div class="header-right">
       <div class="header-controls">
@@ -916,7 +927,8 @@ const EMOJIS = {
 
 let currentUser = null, subscription = null, pendingFile = null;
 const SUPERADMINS = ['pampersbengel_oleg']; // Diese Namen können nicht entfernt werden
-const knebelList = {}; // { name_lowercase: timestamp_until }
+const knebelList = {};
+let currentRoom = 'hauptchat'; // Aktueller Raum // { name_lowercase: timestamp_until }
 let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
 let whisperTarget = null; // { id, name }
 
@@ -1090,6 +1102,25 @@ function startApp(){
   subscribeGagged();
 }
 
+// RÄUME
+async function switchRoom(room){
+  currentRoom = room;
+  document.getElementById('roomSelect').value = room;
+  // Presence updaten mit neuem Raum
+  if(subscription){
+    await subscription.track({
+      name: currentUser.name,
+      avatar: currentUser.avatar||'👤',
+      color: currentUser.colorIndex,
+      isGuest: currentUser.isGuest,
+      isAdmin: currentUser.isAdmin||false,
+      room: currentRoom,
+      online_at: new Date().toISOString()
+    });
+  }
+  loadMessages();
+}
+
 // MESSAGES
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
@@ -1260,9 +1291,11 @@ async function loadMessages(){
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
     .neq('media_type','vote')
+    .eq('room', currentRoom)
     .order('created_at',{ascending:true}).limit(100);
   if(error){ console.log('DB:',error.message);return; }
   const area=document.getElementById('messagesArea');
+  area.innerHTML='<div class="welcome-msg" id="welcomeMsg"><h3>👋 Willkommen im WG-Treffpunkt!</h3><p>Sei der Erste der schreibt – oder warte auf andere.</p></div>';
   if(data&&data.length>0){
     document.getElementById('welcomeMsg')?.remove();
     data.forEach(m=>{
@@ -1318,6 +1351,8 @@ function subscribeMessages(){
       const {data}=await sb.from('messages').select('*').eq('id',msg.id).single();
       if(data) msg=data;
     }
+    // Nur Nachrichten des aktuellen Raums anzeigen
+    if((msg.room||'hauptchat') !== currentRoom) return;
     const el=renderMsg(msg);
     if(!el) return;
     document.getElementById('welcomeMsg')?.remove();
@@ -1439,6 +1474,7 @@ async function sendMessage(){
     avatar:currentUser.avatar||null,media_url,media_type,
     whisper_to: whisperTarget?whisperTarget.name:null,
     whisper_to_name: whisperTarget?whisperTarget.name:null,
+    room: currentRoom,
   };
   if(whisperTarget) cancelWhisper();
   const {error}=await sb.from('messages').insert(payload);
