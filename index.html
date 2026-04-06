@@ -270,7 +270,8 @@
   .btn-logout:hover { background:#d4ff20;transform:translateY(-1px); }
 
   /* MESSAGES */
-  .messages-area { flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth;position:relative; }
+  .messages-area { flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth;position:relative;transition:background 0.5s ease; }
+  .messages-area.room-spielzimmer { background:rgba(100,60,200,0.08);border-left:3px solid rgba(150,100,255,0.3); }
   .messages-area::-webkit-scrollbar { width:4px; }
   .messages-area::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
   .welcome-msg { text-align:center;padding:48px 24px;color:var(--text-muted); }
@@ -1106,6 +1107,9 @@ function startApp(){
 async function switchRoom(room){
   currentRoom = room;
   document.getElementById('roomSelect').value = room;
+  // Raum-Farbe setzen
+  const area = document.getElementById('messagesArea');
+  area.className = 'messages-area' + (room !== 'hauptchat' ? ' room-' + room : '');
   // Presence updaten mit neuem Raum
   if(subscription){
     await subscription.track({
