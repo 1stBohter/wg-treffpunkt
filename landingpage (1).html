@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WG-Treffpunkt – WG-Projekt Köln</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; overflow:hidden; }
+  body { font-family:'DM Sans',sans-serif; background:#0a0a0f; color:#f0f0f8; height:100vh; }
+  .bg { position:fixed;inset:0;background:url('https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/2_WGHAUS.png') center/cover no-repeat;z-index:0; }
+  .bg::after { content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,10,15,0.15) 0%,rgba(10,10,15,0.05) 20%,rgba(10,10,15,0.7) 55%,rgba(10,10,15,0.96) 100%); }
+  .content { position:fixed;bottom:0;left:0;right:0;z-index:1;padding:0 40px 28px;display:flex;flex-direction:column;gap:12px; }
+  .logo { font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(28px,4vw,52px);line-height:1;animation:fadeUp 0.6s ease both; }
+  .tagline { font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:#c8ff00;letter-spacing:3px;text-transform:uppercase;margin-top:-6px;animation:fadeUp 0.6s 0.05s ease both; }
+  .label { font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:#c8ff00;letter-spacing:3px;text-transform:uppercase;animation:fadeUp 0.6s 0.1s ease both; }
+  .namen { font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(11px,1.3vw,15px);color:rgba(255,255,255,0.5);letter-spacing:0.5px;line-height:1.85;animation:fadeUp 0.6s 0.15s ease both; }
+  .namen span { color:#f0f0f8;transition:color 0.2s,text-shadow 0.2s;cursor:default; }
+  .namen span:hover { color:#c8ff00;text-shadow:0 0 12px rgba(200,255,0,0.6); }
+  .sep { color:rgba(255,255,255,0.2);margin:0 5px; }
+  .btn-chat { display:inline-flex;align-items:center;gap:10px;background:#c8ff00;color:#0a0a0f;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;padding:11px 26px;border-radius:100px;text-decoration:none;width:fit-content;transition:all 0.2s;animation:fadeUp 0.6s 0.2s ease both; }
+  .btn-chat:hover { background:#d4ff20;transform:translateY(-2px);box-shadow:0 6px 24px rgba(200,255,0,0.3); }
+  .btn-chat:hover svg { transform:translateX(4px); }
+  .btn-chat svg { transition:transform 0.2s; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="content">
+  <div class="logo">WG-Treffpunkt</div>
+  <div class="tagline">WG-Projekt Köln</div>
+  <div class="label">Mitbewohner</div>
+  <div class="namen">
+    <span>Dominik</span><span class="sep">·</span><span>Oleg</span><span class="sep">·</span><span>Raffi</span><span class="sep">·</span><span>Anton</span><span class="sep">·</span><span>Lucien</span><span class="sep">·</span><span>Mönch</span><span class="sep">·</span><span>Tjarke</span><span class="sep">·</span><span>Daniel</span><span class="sep">·</span><span>Dennis</span><span class="sep">·</span><span>Malte</span><span class="sep">·</span><span>Rambo</span><span class="sep">·</span><span>Steffi</span><span class="sep">·</span><span>Mattes</span><span class="sep">·</span><span>Dustin</span><span class="sep">·</span><span>Yanni</span><span class="sep">·</span><span>Xhe</span><span class="sep">·</span><span>Fabio</span><span class="sep">·</span><span>Collin</span><span class="sep">·</span><span>Emu</span><span class="sep">·</span><span>Diego</span><span class="sep">·</span><span>Linus</span><span class="sep">·</span><span>Hendrik</span><span class="sep">·</span><span>Larsi</span><span class="sep">·</span><span>Andre</span><span class="sep">·</span><span>Nico</span><span class="sep">·</span><span>Ben</span><span class="sep">·</span><span>Kati</span><span class="sep">·</span><span>Gabs</span><span class="sep">·</span><span>Simon</span><span class="sep">·</span><span>Timo</span><span class="sep">·</span><span>Flo</span><span class="sep">·</span><span>Alex</span><span class="sep">·</span><span>Manu</span><span class="sep">·</span><span>Sebi</span><span class="sep">·</span><span>Pascal</span><span class="sep">·</span><span>Fabi</span><span class="sep">·</span><span>Lenor</span><span class="sep">·</span><span>Jan</span>
+  </div>
+  <a class="btn-chat" href="index.html">
+    Zum Chat
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+    </svg>
+  </a>
+</div>
+</body>
+</html>
