@@ -1120,7 +1120,20 @@ window.addEventListener('load',async()=>{
     const u=data.session.user,m=u.user_metadata;
     currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
     startApp();
+    return;
   }
+  // Auto-refresh session
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN' && session && !currentUser){
+      const u=session.user,m=u.user_metadata;
+      currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
+      startApp();
+    }
+    if(event==='SIGNED_OUT'){
+      currentUser=null;
+      document.getElementById('overlay').classList.remove('hidden');
+    }
+  });
 });
 
 // Add avatar column to messages table if needed
