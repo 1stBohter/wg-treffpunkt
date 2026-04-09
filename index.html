@@ -693,7 +693,7 @@ async function register(){
 
 async function logout(){
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
-  if(!currentUser.isGuest) await sb.auth.signOut();
+  // Don't globally sign out - just clear this tab's session
   currentUser=null;
   document.getElementById('app').classList.remove('visible');
   document.getElementById('authOverlay').classList.remove('hidden');
@@ -1111,27 +1111,10 @@ async function sendGif(url){
 function openLB(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 
-// SESSION
+// SESSION - each tab is independent
 window.addEventListener('load',async()=>{
-  const {data}=await sb.auth.getSession();
-  if(data.session){
-    const u=data.session.user,m=u.user_metadata;
-    currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
-    startApp();
-    return;
-  }
-  // Auto-refresh session
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN' && session && !currentUser){
-      const u=session.user,m=u.user_metadata;
-      currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
-      startApp();
-    }
-    if(event==='SIGNED_OUT'){
-      currentUser=null;
-      document.getElementById('overlay').classList.remove('hidden');
-    }
-  });
+  // Each tab starts fresh - no auto-login from stored session
+  // This allows multiple users on same device/IP in different tabs
 });
 
 // Add avatar column to messages table if needed
