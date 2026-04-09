@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WG-Treffpunkt – WG-Projekt Köln</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --accent: #c8ff00;
+    --text: #f0f0f8;
+    --text-muted: #7070a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    height: 100vh;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .hero-img {
+    position: absolute;
+    inset: 0;
+    background: url('https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/2_WGHAUS.png') center/cover no-repeat;
+    z-index: 0;
+  }
+  .hero-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(10,10,15,0.3) 0%,
+      rgba(10,10,15,0.1) 30%,
+      rgba(10,10,15,0.6) 60%,
+      rgba(10,10,15,0.97) 100%
+    );
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 0 40px 48px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(36px, 7vw, 64px);
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 8px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .tagline {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+
+  /* MITBEWOHNER SECTION */
+  .section {
+    padding: 48px 40px 60px;
+    position: relative;
+    z-index: 1;
+  }
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .bewohner-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .bewohner-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .bewohner-chip:hover {
+    background: rgba(200,255,0,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  /* CTA */
+  .cta-wrap {
+    padding: 0 40px 60px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .btn-chat {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--accent);
+    color: #0a0a0f;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 16px 36px;
+    border-radius: 100px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-chat:hover {
+    background: #d4ff20;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(200,255,0,0.25);
+  }
+  .btn-chat svg {
+    transition: transform 0.2s;
+  }
+  .btn-chat:hover svg {
+    transform: translateX(4px);
+  }
+
+  /* FOOTER */
+  .footer {
+    padding: 20px 40px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .footer-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .footer-text {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* DECORATIVE DOT */
+  .dot-accent {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin: 0 4px;
+    vertical-align: middle;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(24px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .hero-content, .section, .cta-wrap, .footer { padding-left: 24px; padding-right: 24px; }
+    .bewohner-chip { padding: 7px 14px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-img"></div>
+  <div class="hero-content">
+    <div class="logo">WG-Treffpunkt</div>
+    <div class="tagline">WG-Projekt Köln</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Mitbewohner</div>
+  <div class="bewohner-list">
+    <span class="bewohner-chip">Dominik</span>
+    <span class="bewohner-chip">Oleg</span>
+    <span class="bewohner-chip">Raffi</span>
+    <span class="bewohner-chip">Anton</span>
+    <span class="bewohner-chip">Lucien</span>
+    <span class="bewohner-chip">Mönch</span>
+    <span class="bewohner-chip">Tjarke</span>
+    <span class="bewohner-chip">Daniel</span>
+    <span class="bewohner-chip">Dennis</span>
+    <span class="bewohner-chip">Malte</span>
+    <span class="bewohner-chip">Rambo</span>
+    <span class="bewohner-chip">Steffi</span>
+    <span class="bewohner-chip">Mattes</span>
+    <span class="bewohner-chip">Dustin</span>
+    <span class="bewohner-chip">Yanni</span>
+    <span class="bewohner-chip">Xhe</span>
+    <span class="bewohner-chip">Fabio</span>
+    <span class="bewohner-chip">Collin</span>
+    <span class="bewohner-chip">Emu</span>
+    <span class="bewohner-chip">Diego</span>
+    <span class="bewohner-chip">Linus</span>
+    <span class="bewohner-chip">Hendrik</span>
+    <span class="bewohner-chip">Larsi</span>
+    <span class="bewohner-chip">Andre</span>
+    <span class="bewohner-chip">Nico</span>
+    <span class="bewohner-chip">Ben</span>
+    <span class="bewohner-chip">Kati</span>
+    <span class="bewohner-chip">Gabs</span>
+    <span class="bewohner-chip">Simon</span>
+    <span class="bewohner-chip">Timo</span>
+    <span class="bewohner-chip">Flo</span>
+    <span class="bewohner-chip">Alex</span>
+    <span class="bewohner-chip">Manu</span>
+    <span class="bewohner-chip">Sebi</span>
+    <span class="bewohner-chip">Pascal</span>
+    <span class="bewohner-chip">Fabi</span>
+    <span class="bewohner-chip">Lenor</span>
+    <span class="bewohner-chip">Jan</span>
+  </div>
+</div>
+
+<div class="cta-wrap">
+  <a class="btn-chat" href="index.html">
+    Zum Chat
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+      <polyline points="12 5 19 12 12 19"></polyline>
+    </svg>
+  </a>
+</div>
+
+<div class="footer">
+  <div class="footer-logo">WG-Treffpunkt</div>
+  <div class="footer-text">WG-Projekt Köln <span class="dot-accent"></span> Nur für Mitbewohner</div>
+</div>
+
+</body>
+</html>
