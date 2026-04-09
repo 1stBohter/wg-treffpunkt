@@ -719,6 +719,7 @@ function startApp(){
   if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
   loadMessages();
   subscribeMessages();
+  if(typeof subscribePresence === 'function') subscribePresence();
 }
 
 // MESSAGES
