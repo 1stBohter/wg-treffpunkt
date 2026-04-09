@@ -229,33 +229,6 @@
   .privacy-box p { font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:24px; }
   .privacy-box .btn-primary { width:100%;padding:12px; }
 
-  /* KALENDER */
-  .calendar-modal { position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:300; }
-  .calendar-modal.open { display:flex; }
-  .calendar-box { background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;width:380px;max-width:95vw;max-height:90vh;overflow-y:auto; }
-  .calendar-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
-  .calendar-title { font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--accent); }
-  .cal-nav { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--text);cursor:pointer;font-size:16px; }
-  .cal-month { font-weight:700;font-size:16px;color:var(--text); }
-  .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px; }
-  .cal-day-name { text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;padding:4px 0; }
-  .cal-day { text-align:center;padding:6px 2px;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.15s;border:1px solid transparent; }
-  .cal-day:hover { background:var(--surface2);border-color:var(--border); }
-  .cal-day.today { background:rgba(200,255,0,0.15);border-color:var(--accent);color:var(--accent);font-weight:700; }
-  .cal-day.has-event { background:rgba(124,58,237,0.2);border-color:#7c3aed; }
-  .cal-day.empty { cursor:default; }
-  .cal-events { margin-top:12px; }
-  .cal-event-item { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center; }
-  .cal-event-text { font-size:13px;color:var(--text); }
-  .cal-event-date { font-size:11px;color:var(--accent);font-weight:600; }
-  .cal-event-del { background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px; }
-  .cal-event-del:hover { color:#ef4444; }
-  .cal-add { display:flex;gap:8px;margin-top:12px; }
-  .cal-add input { flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif; }
-  .cal-add input:focus { border-color:var(--accent2); }
-  .cal-add button { background:var(--accent);border:none;border-radius:10px;padding:9px 14px;color:#0a0a0f;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif; }
-  .cal-close { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 16px;color:var(--text-muted);cursor:pointer;font-size:13px;margin-top:8px;width:100%; }
-
   /* CUSTOM SMILIES */
   .smilie-panel::-webkit-scrollbar { width:3px; }
   .smilie-panel::-webkit-scrollbar-thumb { background:var(--border); }
@@ -714,7 +687,7 @@
           <button class="whisper-cancel" onclick="cancelWhisper()" title="Abbrechen">✕</button>
         </div>
 
-        <div id="watermarkWrap" style="text-align:center;margin-bottom:0;min-height:0;display:none;">
+        <div id="watermarkWrap" style="text-align:center;margin-bottom:6px;min-height:0;">
           <span id="userWatermark" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c8ff00;display:none;"></span>
         </div>
 
@@ -1163,7 +1136,7 @@ function startApp(){
   if(t){ av.style.background=t.av; av.style.color=t.tx; }
   else { av.style.background='rgba(55,65,81,0.5)'; }
   document.getElementById('headerName').textContent=currentUser.name;
-  // watermark hidden by default
+  const wm=document.getElementById('userWatermark');wm.textContent=currentUser.name;wm.style.display='inline';
   const roleEl=document.getElementById('headerRole');
   if(roleEl) roleEl.textContent=currentUser.isAdmin?'👑 Admin':currentUser.isGuest?'👤 Gast':'⭐ Member';
   const msgInput=document.getElementById('msgInput');
@@ -2165,76 +2138,6 @@ function checkPrivacy(){
   }
 }
 
-// KALENDER
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth();
-let calSelectedDate = null;
-let calEvents = JSON.parse(localStorage.getItem('wg_cal_events')||'[]');
-
-function openCalendar(){
-  document.getElementById('calendarModal').classList.add('open');
-  renderCalendar();
-}
-function closeCalendar(){
-  document.getElementById('calendarModal').classList.remove('open');
-}
-function calPrevMonth(){ calMonth--;if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
-function calNextMonth(){ calMonth++;if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
-
-function renderCalendar(){
-  const months=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-  document.getElementById('calMonthLabel').textContent=`${months[calMonth]} ${calYear}`;
-  const grid=document.getElementById('calGrid');
-  grid.innerHTML='';
-  const days=['Mo','Di','Mi','Do','Fr','Sa','So'];
-  days.forEach(d=>{ const el=document.createElement('div');el.className='cal-day-name';el.textContent=d;grid.appendChild(el); });
-  const firstDay=(new Date(calYear,calMonth,1).getDay()+6)%7;
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const today=new Date();
-  for(let i=0;i<firstDay;i++){ const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el); }
-  for(let d=1;d<=daysInMonth;d++){
-    const el=document.createElement('div');
-    el.className='cal-day';
-    el.textContent=d;
-    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    if(today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear) el.classList.add('today');
-    if(calEvents.some(e=>e.date===dateStr)) el.classList.add('has-event');
-    el.onclick=()=>{ calSelectedDate=dateStr; renderCalEvents(); };
-    grid.appendChild(el);
-  }
-  renderCalEvents();
-}
-
-function renderCalEvents(){
-  const div=document.getElementById('calEvents');
-  const filtered=calSelectedDate?calEvents.filter(e=>e.date===calSelectedDate):calEvents;
-  if(!filtered.length){ div.innerHTML=`<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px">${calSelectedDate?'Keine Termine an diesem Tag':'Klick auf einen Tag um Termine zu sehen'}</div>`;return; }
-  div.innerHTML=filtered.map((e,i)=>`
-    <div class="cal-event-item">
-      <div>
-        <div class="cal-event-text">${e.text}</div>
-        <div class="cal-event-date">📅 ${e.date}</div>
-      </div>
-      <button class="cal-event-del" onclick="delCalEvent(${calEvents.indexOf(e)})">🗑️</button>
-    </div>`).join('');
-}
-
-function addCalEvent(){
-  const text=document.getElementById('calEventText').value.trim();
-  if(!text||!calSelectedDate) return alert(calSelectedDate?'Bitte Text eingeben!':'Bitte erst einen Tag auswählen!');
-  calEvents.push({date:calSelectedDate,text,user:currentUser?.name||'Unbekannt'});
-  localStorage.setItem('wg_cal_events',JSON.stringify(calEvents));
-  document.getElementById('calEventText').value='';
-  renderCalendar();
-}
-
-function delCalEvent(idx){
-  if(!confirm('Termin löschen?')) return;
-  calEvents.splice(idx,1);
-  localStorage.setItem('wg_cal_events',JSON.stringify(calEvents));
-  renderCalendar();
-}
-
 // SESSION - immer Login-Screen zeigen, kein Auto-Login
 window.addEventListener('load', async()=>{
   await sb.auth.signOut();
@@ -2270,27 +2173,6 @@ async function loadBackground(){
 // ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to text;
 // ALTER TABLE messages ADD COLUMN IF NOT EXISTS whisper_to_name text;
 </script>
-
-<!-- KALENDER MODAL -->
-<div class="calendar-modal" id="calendarModal">
-  <div class="calendar-box">
-    <div class="calendar-header">
-      <span class="calendar-title">📅 Kalender</span>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="cal-nav" onclick="calPrevMonth()">◀</button>
-        <span class="cal-month" id="calMonthLabel"></span>
-        <button class="cal-nav" onclick="calNextMonth()">▶</button>
-      </div>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
-    <div class="cal-events" id="calEvents"></div>
-    <div class="cal-add">
-      <input type="text" id="calEventText" placeholder="Termin eingeben...">
-      <button onclick="addCalEvent()">+ Hinzufügen</button>
-    </div>
-    <button class="cal-close" onclick="closeCalendar()">✕ Schließen</button>
-  </div>
-</div>
 
 </body>
 </html>
