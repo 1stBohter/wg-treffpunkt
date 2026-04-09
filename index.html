@@ -3,51 +3,1215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WG-Treffpunkt – WG-Projekt Köln</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<title>WG-Treffpunkt</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { height:100%; overflow:hidden; }
-  body { font-family:'Syne',sans-serif; background:#0a0a0f; color:#f0f0f8; height:100vh; }
-  .bg { position:fixed;inset:0;background:url('https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/2_WGHAUS.png') center/cover no-repeat;z-index:0; }
-  .bg::after { content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,10,15,0.1) 0%,rgba(10,10,15,0.05) 15%,rgba(10,10,15,0.65) 50%,rgba(10,10,15,0.97) 100%); }
-  .content { position:fixed;bottom:0;left:0;right:0;z-index:1;padding:0 40px 24px;display:flex;flex-direction:column;gap:10px; }
-  .logo { font-weight:800;font-size:clamp(26px,3.8vw,50px);line-height:1;animation:fadeUp 0.6s ease both; }
-  .tagline { font-weight:700;font-size:10px;color:#c8ff00;letter-spacing:3px;text-transform:uppercase;margin-top:-5px;animation:fadeUp 0.6s 0.05s ease both; }
-  .label { font-weight:700;font-size:10px;color:#c8ff00;letter-spacing:3px;text-transform:uppercase;animation:fadeUp 0.6s 0.1s ease both; }
-  .namen-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:4px 0;animation:fadeUp 0.6s 0.15s ease both; }
-  .reihe { font-weight:700;font-size:clamp(11px,1.15vw,14px);color:#f0f0f8;letter-spacing:0.3px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-  .reihe .n { transition:color 0.15s,text-shadow 0.15s;cursor:default; }
-  .reihe .n:hover { color:#c8ff00;text-shadow:0 0 10px rgba(200,255,0,0.5); }
-  .sep { color:rgba(255,255,255,0.2);margin:0 4px; }
-  .btn-chat { display:inline-flex;align-items:center;gap:9px;background:#c8ff00;color:#0a0a0f;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;border-radius:100px;text-decoration:none;width:fit-content;transition:all 0.2s;animation:fadeUp 0.6s 0.2s ease both; }
-  .btn-chat:hover { background:#d4ff20;transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,255,0,0.3); }
-  .btn-chat:hover svg { transform:translateX(4px); }
-  .btn-chat svg { transition:transform 0.2s; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)} }
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c27;
+    --border: #2a2a3a; --accent: #c8ff00; --accent2: #7c3aed;
+    --text: #f0f0f8; --text-muted: #7070a0; --online: #22c55e;
+  }
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column; }
+  body::before { content:'';position:fixed;top:-30%;right:-20%;width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%);pointer-events:none;z-index:0; }
+  body::after { content:'';position:fixed;bottom:-20%;left:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(200,255,0,0.07) 0%,transparent 70%);pointer-events:none;z-index:0; }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+
+  /* OVERLAY */
+  .overlay { position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.75)),url("https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Chat_neu_2.jpg") center/cover no-repeat;display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn 0.3s ease; }
+  .overlay.hidden { display:none; }
+  .modal { background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px;width:480px;max-width:95vw;max-height:92vh;overflow-y:auto;animation:slideUp 0.3s ease;position:relative;z-index:101; }
+  .modal-logo { font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);margin-bottom:6px; }
+  .modal-subtitle { color:var(--text-muted);font-size:14px;margin-bottom:26px; }
+  .modal h2 { font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:18px;color:var(--text); }
+  .input-group { margin-bottom:14px; }
+  .input-group label { display:block;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px; }
+  .input-group input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
+  .input-group input:focus { border-color:var(--accent2); }
+  .input-group input::placeholder { color:var(--text-muted); }
+
+  /* AVATAR PICKER */
+  .avatar-picker-section { margin-bottom:16px; }
+  .avatar-picker-section label { display:block;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px; }
+  .avatar-selected-preview { display:flex;align-items:center;gap:12px;margin-bottom:12px; }
+  .avatar-preview-big { width:56px;height:56px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0; }
+  .avatar-preview-info { font-size:13px;color:var(--text-muted); }
+  .avatar-preview-info strong { display:block;color:var(--text);font-size:14px; }
+
+  .avatar-tabs { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px; }
+  .avatar-tab { background:none;border:none;cursor:pointer;font-size:11px;padding:5px 10px;border-radius:8px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s; }
+  .avatar-tab:hover,.avatar-tab.active { background:var(--surface2);color:var(--text); }
+  .avatar-grid { display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:180px;overflow-y:auto; }
+  .avatar-grid::-webkit-scrollbar { width:3px; }
+  .avatar-grid::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+  .avatar-option { background:none;border:2px solid transparent;border-radius:12px;padding:6px;cursor:pointer;font-size:24px;text-align:center;line-height:1;transition:all 0.15s; }
+  .avatar-option:hover { background:var(--surface2);transform:scale(1.15); }
+  .avatar-option.selected { border-color:var(--accent);background:rgba(200,255,0,0.1); }
+
+  /* COLOR PICKER */
+  .color-picker-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:6px; }
+  .color-swatch { width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all 0.2s; }
+  .color-swatch.selected { border-color:white;transform:scale(1.2); }
+  .color-swatch:hover { transform:scale(1.1); }
+  .color-label { font-size:11px;color:var(--text-muted);margin-top:4px;min-height:14px; }
+
+  .btn-primary { width:100%;background:var(--accent);color:#0a0a0f;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:6px; }
+  .btn-primary:hover { background:#d4ff20;transform:translateY(-1px); }
+  .btn-ghost { width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s;margin-top:8px; }
+  .btn-ghost:hover { border-color:var(--text-muted);color:var(--text); }
+  .divider { display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--text-muted);font-size:13px; }
+  .divider::before,.divider::after { content:'';flex:1;height:1px;background:var(--border); }
+  .error-msg { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:10px;display:none; }
+  .error-msg.show { display:block; }
+
+  /* MAIN APP */
+  #app { display:none;flex-direction:column;height:100vh;position:relative;z-index:1; }
+  #app.visible { display:flex; }
+  .chat-layout { display:flex;flex:1;overflow:hidden; }
+  .chat-main { display:flex;flex-direction:column;flex:1;overflow:hidden; }
+  .online-sidebar { width:180px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden; }
+  .online-sidebar-title { padding:14px 14px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);border-bottom:1px solid var(--border); }
+  .online-list { flex:1;overflow-y:auto;padding:8px; }
+  .online-list::-webkit-scrollbar { width:3px; }
+  .online-list::-webkit-scrollbar-thumb { background:var(--border); }
+  .online-user { display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:10px;margin-bottom:3px;transition:background 0.15s; }
+  .online-user:hover { background:var(--surface2); }
+  .online-user-avatar { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;position:relative; }
+  .online-user-avatar::after { content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;background:var(--online);border-radius:50%;border:2px solid var(--surface); }
+  .online-user-name { font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+  /* LIGHT MODE */
+  body.light { --bg:#f0f0f5;--surface:#ffffff;--surface2:#e8e8f0;--border:#d0d0e0;--text:#1a1a2e;--text-muted:#6060a0; }
+  body.light .header { background:rgba(255,255,255,0.95); }
+  body.light .input-area { background:rgba(255,255,255,0.95); }
+  body.light .msg-bubble { background:#e8e8f0;border-color:#d0d0e0;color:#1a1a2e; }
+
+  /* FONT SIZES */
+  body.font-sm .msg-bubble { font-size:13px; }
+  body.font-md .msg-bubble { font-size:16px; }
+  body.font-lg .msg-bubble { font-size:20px; }
+  body.font-sm .msg-avatar-name { font-size:10px; }
+  body.font-lg .msg-avatar-name { font-size:14px; }
+
+  /* HEADER CONTROLS */
+  .header-controls { display:flex;align-items:center;gap:6px; }
+  .ctrl-btn { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 9px;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;font-weight:600; }
+  .ctrl-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .ctrl-btn.active { background:var(--accent);color:#0a0a0f;border-color:var(--accent); }
+
+  /* REACTIONS */
+  .msg-reactions { display:flex;flex-wrap:wrap;gap:3px;margin-top:5px; }
+  .reaction-btn { background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:13px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px; }
+  .reaction-btn:hover { border-color:var(--accent);transform:scale(1.1); }
+  .reaction-btn.mine { background:rgba(200,255,0,0.15);border-color:var(--accent); }
+  .reaction-count { font-size:11px;color:var(--text-muted);font-weight:600; }
+
+  /* CUSTOM SMILIES */
+  .smilie-panel { position:absolute;bottom:100%;left:18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;width:320px;max-height:260px;overflow-y:auto;display:none;z-index:50;box-shadow:0 -8px 32px rgba(0,0,0,0.5);animation:popIn 0.2s ease; }
+  .smilie-panel.open { display:block; }
+  .smilie-panel::-webkit-scrollbar { width:3px; }
+  .smilie-panel::-webkit-scrollbar-thumb { background:var(--border); }
+  .smilie-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:6px; }
+  .smilie-item { display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px;border-radius:10px;transition:background 0.15s;border:1px solid transparent; }
+  .smilie-item:hover { background:var(--surface2);border-color:var(--border); }
+  .smilie-item img { width:40px;height:40px;object-fit:contain; }
+  .smilie-item span { font-size:10px;color:var(--text-muted);text-align:center;word-break:break-all; }
+  .msg-bubble img.custom-smilie { width:40px;height:40px;object-fit:contain;vertical-align:middle;display:inline;margin:0 2px;border-radius:4px; }
+  .reaction-picker { position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 8px;display:flex;gap:4px;z-index:20;box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:popIn 0.15s ease; }
+  .reaction-picker button { background:none;border:none;cursor:pointer;font-size:20px;padding:3px;border-radius:6px;transition:transform 0.15s; }
+  .reaction-picker button:hover { transform:scale(1.3); }
+
+  /* DELETE */
+  .msg-actions { display:none;position:absolute;top:-8px;right:8px;gap:4px; }
+  .msg-wrap:hover .msg-actions { display:flex; }
+  .msg-wrap { position:relative; }
+  .action-btn { background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;color:var(--text-muted);transition:all 0.15s; }
+  .action-btn:hover { color:#ef4444;border-color:#ef4444; }
+  .action-react { color:var(--text-muted); }
+  .action-react:hover { color:var(--accent);border-color:var(--accent) !important; }
+
+  .header { display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(19,19,26,0.9);backdrop-filter:blur(12px);flex-shrink:0;z-index:10; }
+  .header-left { display:flex;align-items:center;gap:14px; }
+  .logo { font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--accent);letter-spacing:-0.5px; }
+  .online-badge { display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--online); }
+  .online-dot { width:6px;height:6px;background:var(--online);border-radius:50%;animation:pulse 2s infinite; }
+  .header-right { display:flex;align-items:center;gap:10px; }
+  .user-chip { display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px 6px 8px; }
+  .header-avatar { width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+  .user-chip-info { display:flex;flex-direction:column; }
+  .user-name { font-size:15px;font-weight:700;color:var(--text);line-height:1.2; }
+  .user-role { font-size:11px;color:var(--text-muted);line-height:1.2; }
+  .btn-logout { background:var(--accent);border:none;border-radius:8px;padding:6px 14px;color:#0a0a0f;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif; }
+  .btn-logout:hover { background:#d4ff20;transform:translateY(-1px); }
+
+  /* MESSAGES */
+  .messages-area { flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth; }
+  .messages-area::-webkit-scrollbar { width:4px; }
+  .messages-area::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+  .welcome-msg { text-align:center;padding:48px 24px;color:var(--text-muted); }
+  .welcome-msg h3 { font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px; }
+
+  .message { display:flex;gap:10px;align-items:flex-end;animation:msgIn 0.25s ease;padding:2px 0; }
+  .message.own { flex-direction:row; }
+
+  .msg-avatar-wrap { display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:64px; }
+  .msg-avatar { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:2px solid transparent; }
+  .msg-avatar.guest-style { background:linear-gradient(135deg,#374151,#6b7280);font-size:14px;color:white;font-family:'Syne',sans-serif;font-weight:700; }
+  .msg-avatar-name { font-size:12px;color:var(--text);text-align:center;margin-top:4px;max-width:60px;word-break:break-word;font-weight:700;line-height:1.2; }
+
+  .msg-content { max-width:62%; }
+  .msg-name { font-size:13px;color:var(--text);margin-bottom:5px;font-weight:700;letter-spacing:0.1px; }
+  .message.own .msg-name { text-align:left; }
+  .msg-bubble { background:var(--surface2);border:1px solid var(--border);border-radius:18px 18px 18px 4px;padding:12px 16px;font-size:16px;line-height:1.6;color:var(--text);word-break:break-word; }
+  .message.own .msg-bubble { border-radius:18px 18px 18px 4px; }
+  .msg-bubble img { max-width:240px;max-height:280px;border-radius:10px;display:block;margin-top:4px;cursor:pointer; }
+  .msg-bubble img:hover { opacity:0.9; }
+  .msg-bubble video { max-width:260px;border-radius:10px;display:block;margin-top:4px; }
+  .msg-time { font-size:10px;color:var(--text-muted);margin-top:3px;padding:0 4px; }
+  .message.own .msg-time { text-align:left; }
+
+  /* INPUT */
+  .input-area { padding:10px 18px 14px;border-top:1px solid var(--border);background:rgba(19,19,26,0.9);backdrop-filter:blur(12px);flex-shrink:0;position:relative; }
+
+  /* EMOJI PANEL */
+  .emoji-panel { position:absolute;bottom:100%;left:18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;width:300px;max-height:260px;overflow-y:auto;display:none;z-index:50;box-shadow:0 -8px 32px rgba(0,0,0,0.5);animation:popIn 0.2s ease; }
+  .emoji-panel.open { display:block; }
+  .emoji-tabs { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px;align-items:center; }
+  .emoji-tab { background:none;border:none;cursor:pointer;font-size:17px;padding:4px 7px;border-radius:8px;transition:background 0.15s;opacity:0.6;font-family:'DM Sans',sans-serif; }
+  .emoji-tab:hover,.emoji-tab.active { background:var(--surface2);opacity:1; }
+  .emoji-grid { display:grid;grid-template-columns:repeat(8,1fr);gap:2px; }
+  .emoji-btn { background:none;border:none;cursor:pointer;font-size:20px;padding:5px;border-radius:8px;transition:all 0.15s;text-align:center;line-height:1; }
+  .emoji-btn:hover { background:var(--surface2);transform:scale(1.2); }
+
+
+  .gif-item:hover { opacity:0.8; }
+
+  .input-toolbar { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+  .toolbar-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text-muted);cursor:pointer;font-size:16px;transition:all 0.2s;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif; }
+  .toolbar-btn span { font-size:12px; }
+  .toolbar-btn:hover { border-color:var(--accent2);color:var(--text); }
+  #fileInput { display:none; }
+
+  .upload-preview { display:none;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:8px; }
+  .upload-preview.show { display:flex; }
+  .upload-preview img,.upload-preview video { height:44px;border-radius:6px;max-width:80px;object-fit:cover; }
+  .upload-preview-name { font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .upload-remove { background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px;transition:color 0.2s; }
+  .upload-remove:hover { color:#ef4444; }
+
+  .input-box { display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:8px 8px 8px 16px;transition:border-color 0.2s; }
+  .input-box:focus-within { border-color:var(--accent2); }
+  .input-box input { flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px; }
+  .input-box input::placeholder { color:var(--text-muted); }
+  .btn-send { background:var(--accent);border:none;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;flex-shrink:0; }
+  .btn-send:hover { background:#d4ff20;transform:scale(1.05); }
+  .char-count { font-size:11px;color:var(--text-muted);text-align:right;margin-top:5px; }
+
+  /* LIGHTBOX */
+  .lightbox { position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out; }
+  .lightbox.open { display:flex; }
+  .lightbox img { max-width:90vw;max-height:90vh;border-radius:12px; }
 </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="content">
-  <div class="logo">WG-Treffpunkt</div>
-  <div class="tagline">WG-Projekt Köln</div>
-  <div class="label">Mitbewohner</div>
-  <div class="namen-grid">
-    <div class="reihe"><span class="n">Dominik</span><span class="sep">·</span><span class="n">Oleg</span><span class="sep">·</span><span class="n">Raffi</span><span class="sep">·</span><span class="n">Anton</span><span class="sep">·</span><span class="n">Lucien</span><span class="sep">·</span><span class="n">Mönch</span></div>
-    <div class="reihe"><span class="n">Tjarke</span><span class="sep">·</span><span class="n">Daniel</span><span class="sep">·</span><span class="n">Dennis</span><span class="sep">·</span><span class="n">Malte</span><span class="sep">·</span><span class="n">Rambo</span><span class="sep">·</span><span class="n">Steffi</span></div>
-    <div class="reihe"><span class="n">Mattes</span><span class="sep">·</span><span class="n">Dustin</span><span class="sep">·</span><span class="n">Yanni</span><span class="sep">·</span><span class="n">Xhe</span><span class="sep">·</span><span class="n">Fabio</span><span class="sep">·</span><span class="n">Collin</span></div>
-    <div class="reihe"><span class="n">Emu</span><span class="sep">·</span><span class="n">Diego</span><span class="sep">·</span><span class="n">Linus</span><span class="sep">·</span><span class="n">Hendrik</span><span class="sep">·</span><span class="n">Larsi</span><span class="sep">·</span><span class="n">Andre</span></div>
-    <div class="reihe"><span class="n">Nico</span><span class="sep">·</span><span class="n">Ben</span><span class="sep">·</span><span class="n">Kati</span><span class="sep">·</span><span class="n">Gabs</span><span class="sep">·</span><span class="n">Simon</span><span class="sep">·</span><span class="n">Timo</span></div>
-    <div class="reihe"><span class="n">Flo</span><span class="sep">·</span><span class="n">Alex</span><span class="sep">·</span><span class="n">Manu</span><span class="sep">·</span><span class="n">Sebi</span><span class="sep">·</span><span class="n">Pascal</span><span class="sep">·</span><span class="n">Fabi</span></div>
-    <div class="reihe"><span class="n">Lenor</span><span class="sep">·</span><span class="n">Jan</span></div>
+
+<!-- AUTH -->
+<div class="overlay" id="authOverlay">
+  <div class="modal">
+    <div class="modal-logo">WG-Treffpunkt</div>
+    <div class="modal-subtitle">Trete dem Chat bei – anonym oder mit Account</div>
+
+    <!-- GUEST -->
+    <div id="guestView">
+      <h2>Wie möchtest du chatten?</h2>
+      <div class="input-group">
+        <label>Dein Anzeigename</label>
+        <input type="text" id="guestName" placeholder="z.B. Nightwolf, Creator99..." maxlength="30">
+      </div>
+      <button class="btn-primary" onclick="joinAsGuest()">💬 Als Gast beitreten</button>
+      <div class="divider">oder mit Account</div>
+      <button class="btn-ghost" onclick="showLogin()">🔑 Anmelden</button>
+      <button class="btn-ghost" onclick="showRegister()">✨ Account erstellen</button>
+      <div class="error-msg" id="guestError"></div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginView" style="display:none">
+      <h2>Willkommen zurück</h2>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="deine@email.com">
+      </div>
+      <div class="input-group">
+        <label>Passwort</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="login()">Anmelden</button>
+      <button class="btn-ghost" onclick="showGuest()">← Zurück</button>
+      <div class="error-msg" id="loginError"></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerView" style="display:none">
+      <h2>Account erstellen</h2>
+      <div class="input-group">
+        <label>Dein Name</label>
+        <input type="text" id="regName" placeholder="Dein Anzeigename" maxlength="30">
+      </div>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="deine@email.com">
+      </div>
+      <div class="input-group">
+        <label>Passwort</label>
+        <input type="password" id="regPassword" placeholder="Mindestens 6 Zeichen">
+      </div>
+
+      <!-- AVATAR PICKER -->
+      <div class="avatar-picker-section">
+        <label>🎭 Dein Avatar (exklusiv für Members!)</label>
+        <div class="avatar-selected-preview">
+          <div class="avatar-preview-big" id="avatarPreviewBig">🐺</div>
+          <div class="avatar-preview-info">
+            <strong id="avatarPreviewName">Wolf</strong>
+            Dein Chat-Avatar
+          </div>
+        </div>
+        <div class="avatar-tabs" id="avatarTabs"></div>
+        <div class="avatar-grid" id="avatarGrid"></div>
+      </div>
+
+      <!-- COLOR PICKER -->
+      <div class="input-group">
+        <label>🎨 Deine Chat-Farbe</label>
+        <div class="color-picker-row" id="colorPicker"></div>
+        <div class="color-label" id="colorLabel">Lila</div>
+      </div>
+
+      <button class="btn-primary" onclick="register()">✨ Account erstellen</button>
+      <button class="btn-ghost" onclick="showGuest()">← Zurück</button>
+      <div class="error-msg" id="regError"></div>
+    </div>
   </div>
-  <a class="btn-chat" href="index.html">
-    Zum Chat
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-    </svg>
-  </a>
 </div>
+
+<!-- HILFE MODAL -->
+<div class="overlay hidden" id="hilfeOverlay" onclick="closeHilfe(event)">
+  <div class="modal" style="max-width:540px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-logo" style="margin:0">📖 Schnellanleitung</div>
+      <button onclick="closeHilfe()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Beitreten</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Name eingeben &amp; beitreten</div><div style="font-size:13px;color:var(--text-muted)">Anzeigenamen eintippen → <strong>„Als Gast beitreten"</strong> klicken. Kein Account nötig!</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Nachrichten schreiben</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Text senden</div><div style="font-size:13px;color:var(--text-muted)">Unten ins Textfeld tippen → <strong>Enter</strong> oder grüner Pfeil.</div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Emojis &amp; Smilies</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Emoji"</strong> für normale Emojis · <strong>„Smilies"</strong> für WG-Bilder · oder tippen: <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:bier</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:lol</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:cool1</span></div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">4</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Bild oder Video senden</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Datei"</strong> klicken → Bild/Video auswählen → senden.</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Auf Nachrichten reagieren</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">5</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Reaktion hinzufügen</div><div style="font-size:13px;color:var(--text-muted)">Über Nachricht fahren → <strong>Smiley-Symbol</strong> → Emoji wählen.</div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">6</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Eigene Nachricht löschen</div><div style="font-size:13px;color:var(--text-muted)">Über eigene Nachricht fahren → <strong>Mülleimer</strong> antippen.</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Extras oben rechts</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🌙 <strong>Hell/Dunkel</strong> wechseln</div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🔤 <strong>A</strong> = Schriftgröße ändern</div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">👥 Rechts = wer ist <strong>online</strong></div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🚪 <strong>Abmelden</strong> zum Verlassen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">WG-Treffpunkt</div>
+      <div class="online-badge">
+        <div class="online-dot"></div>
+        <span>Chat aktiv</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-controls">
+        <button class="ctrl-btn" onclick="toggleTheme()" id="themeBtn" title="Hell/Dunkel">🌙</button>
+        <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
+        <button class="ctrl-btn" onclick="openHilfe()" title="Hilfe">❓</button>
+      </div>
+      <div class="user-chip">
+        <div class="header-avatar" id="headerAvatar">👤</div>
+        <div class="user-chip-info">
+          <span class="user-name" id="headerName">Gast</span>
+          <span class="user-role" id="headerRole">Gast</span>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Abmelden</button>
+    </div>
+  </div>
+
+  <div class="chat-layout">
+    <div class="chat-main">
+      <div class="messages-area" id="messagesArea">
+        <div class="welcome-msg" id="welcomeMsg">
+          <h3>👋 Willkommen im WG-Treffpunkt!</h3>
+          <p>Sei der Erste der schreibt – oder warte auf andere.</p>
+        </div>
+      </div>
+
+      <div class="input-area">
+    <div class="emoji-panel" id="emojiPanel">
+      <div class="emoji-tabs">
+        <button class="emoji-tab active" onclick="switchETab('smileys',this)">😀</button>
+        <button class="emoji-tab" onclick="switchETab('hearts',this)">❤️</button>
+        <button class="emoji-tab" onclick="switchETab('hands',this)">👋</button>
+        <button class="emoji-tab" onclick="switchETab('nature',this)">🌿</button>
+        <button class="emoji-tab" onclick="switchETab('food',this)">🍕</button>
+        <button class="emoji-tab" onclick="switchETab('activity',this)">⚽</button>
+        <button class="emoji-tab" onclick="switchETab('objects',this)">💡</button>
+        <button class="emoji-tab" onclick="switchETab('symbols',this)">🔥</button>
+
+      </div>
+      <div class="emoji-grid" id="emojiGrid"></div>
+
+    </div>
+
+    <div class="upload-preview" id="uploadPreview">
+      <div id="uploadThumb"></div>
+      <div class="upload-preview-name" id="uploadName"></div>
+      <button class="upload-remove" onclick="clearUpload()">✕</button>
+    </div>
+
+    <div class="smilie-panel" id="smiliePanel">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎭 Chat-Smilies – einfach :code tippen!</div>
+      <div class="smilie-grid" id="smilieGrid"></div>
+    </div>
+
+    <div class="input-toolbar">
+      <button class="toolbar-btn" onclick="toggleEmoji()">😊 <span>Emoji</span></button>
+      <button class="toolbar-btn" onclick="toggleSmiliePanel();buildSmiliePanel()">🎭 <span>Smilies</span></button>
+      <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
+      <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
+    </div>
+
+    <div class="input-box">
+      <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar()">
+      <button class="btn-send" onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    <div class="char-count" id="charCount">0 / 2000</div>
+      </div>
+    </div><!-- end chat-main -->
+
+    <div class="online-sidebar">
+      <div class="online-sidebar-title">👥 Online</div>
+      <div class="online-list" id="onlineList"></div>
+    </div>
+  </div><!-- end chat-layout -->
+</div>
+
+<script>
+const SUPABASE_URL = 'https://agwhtutxyfeatguquvrh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_YzSPbskpvdxdPP0lxENI9w_KZqaBIDW';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== AVATARS =====
+const AVATAR_CATS = {
+  '😀 Smileys': {
+    items: [
+      {e:'😀',n:'Lachen'},{e:'😃',n:'Freude'},{e:'😄',n:'Strahlen'},{e:'😁',n:'Grinsen'},{e:'😆',n:'Kichern'},
+      {e:'😅',n:'Erleichtert'},{e:'🤣',n:'Tränen'},{e:'😂',n:'LOL'},{e:'🙂',n:'Lächeln'},{e:'😉',n:'Zwinkern'},
+      {e:'😊',n:'Warm'},{e:'😇',n:'Engel'},{e:'🥰',n:'Verliebt'},{e:'😍',n:'Herzen'},{e:'🤩',n:'Wow'},
+      {e:'😘',n:'Kuss'},{e:'😎',n:'Cool'},{e:'🤓',n:'Nerd'},{e:'🧐',n:'Monokel'},{e:'🥳',n:'Party'},
+      {e:'🤠',n:'Cowboy'},{e:'😈',n:'Teufel'},{e:'😇',n:'Heilig'},{e:'🤡',n:'Clown'},{e:'👻',n:'Geist'},
+      {e:'💀',n:'Skull'},{e:'👽',n:'Alien'},{e:'🤖',n:'Roboter'},{e:'🎃',n:'Halloween'},{e:'😺',n:'Katze'},
+      {e:'😸',n:'Katz-Lach'},{e:'😹',n:'Katz-LOL'},{e:'😻',n:'Katz-Herz'},{e:'😼',n:'Katz-Cool'},{e:'🙀',n:'Katz-Schock'},
+    ]
+  },
+  '🐾 Tiere': {
+    items: [
+      {e:'🐺',n:'Wolf'},{e:'🦊',n:'Fuchs'},{e:'🐻',n:'Bär'},{e:'🐼',n:'Panda'},{e:'🦁',n:'Löwe'},
+      {e:'🐯',n:'Tiger'},{e:'🐨',n:'Koala'},{e:'🦝',n:'Waschbär'},{e:'🐸',n:'Frosch'},{e:'🐰',n:'Hase'},
+      {e:'🐭',n:'Maus'},{e:'🐮',n:'Kuh'},{e:'🐷',n:'Schwein'},{e:'🐔',n:'Huhn'},{e:'🐧',n:'Pinguin'},
+      {e:'🦅',n:'Adler'},{e:'🦉',n:'Eule'},{e:'🦋',n:'Schmetterling'},{e:'🐢',n:'Schildkröte'},{e:'🦎',n:'Eidechse'},
+      {e:'🐬',n:'Delfin'},{e:'🦈',n:'Hai'},{e:'🐙',n:'Oktopus'},{e:'🦑',n:'Tintenfisch'},{e:'🦀',n:'Krebs'},
+      {e:'🦜',n:'Papagei'},{e:'🦚',n:'Pfau'},{e:'🦩',n:'Flamingo'},{e:'🦒',n:'Giraffe'},{e:'🐘',n:'Elefant'},
+    ]
+  },
+  '🧙 Fantasy': {
+    items: [
+      {e:'🧙‍♂️',n:'Zauberer'},{e:'🧙‍♀️',n:'Hexe'},{e:'🧝‍♂️',n:'Elf'},{e:'🧝‍♀️',n:'Elfin'},{e:'🧛‍♂️',n:'Vampir'},
+      {e:'🧟‍♂️',n:'Zombie'},{e:'👻',n:'Geist'},{e:'💀',n:'Totenkopf'},{e:'🤖',n:'Roboter'},{e:'👾',n:'Alien'},
+      {e:'👽',n:'UFO-Alien'},{e:'🦄',n:'Einhorn'},{e:'🐉',n:'Drache'},{e:'🧞‍♂️',n:'Dschinn'},{e:'🧚‍♀️',n:'Fee'},
+      {e:'🧜‍♀️',n:'Meerjungfrau'},{e:'🧜‍♂️',n:'Meermann'},{e:'🧚‍♂️',n:'Feenmann'},{e:'🦸‍♂️',n:'Superheld'},{e:'🦸‍♀️',n:'Superheldin'},
+      {e:'🦹‍♂️',n:'Superschurke'},{e:'🥷',n:'Ninja'},{e:'🧑‍🚀',n:'Astronaut'},{e:'👨‍🎤',n:'Rockstar'},{e:'🕵️‍♂️',n:'Detektiv'},
+    ]
+  },
+  '🌍 Natur': {
+    items: [
+      {e:'🌊',n:'Welle'},{e:'🔥',n:'Feuer'},{e:'⚡',n:'Blitz'},{e:'❄️',n:'Eis'},{e:'🌪️',n:'Tornado'},
+      {e:'🌈',n:'Regenbogen'},{e:'☄️',n:'Komet'},{e:'🌙',n:'Mond'},{e:'⭐',n:'Stern'},{e:'🌟',n:'Glitzer'},
+      {e:'💫',n:'Funkeln'},{e:'🌺',n:'Blume'},{e:'🌸',n:'Kirschblüte'},{e:'🌻',n:'Sonnenblume'},{e:'🍀',n:'Kleeblatt'},
+      {e:'🌵',n:'Kaktus'},{e:'🌴',n:'Palme'},{e:'🍄',n:'Pilz'},{e:'🌍',n:'Erde'},{e:'🪐',n:'Saturn'},
+      {e:'🌋',n:'Vulkan'},{e:'🏔️',n:'Berg'},{e:'🏝️',n:'Insel'},{e:'🌅',n:'Sonnenaufgang'},{e:'🌌',n:'Galaxie'},
+    ]
+  },
+  '⚔️ Krieger': {
+    items: [
+      {e:'⚔️',n:'Schwerter'},{e:'🛡️',n:'Schild'},{e:'🏹',n:'Bogenschütze'},{e:'🔱',n:'Dreizack'},{e:'💣',n:'Bombe'},
+      {e:'🎯',n:'Zielscheibe'},{e:'👑',n:'Krone'},{e:'💎',n:'Diamant'},{e:'🔮',n:'Kristallkugel'},{e:'⚗️',n:'Alchemie'},
+      {e:'🗡️',n:'Dolch'},{e:'🪄',n:'Zauberstab'},{e:'🎪',n:'Zirkus'},{e:'🎭',n:'Theater'},{e:'🎲',n:'Würfel'},
+      {e:'♟️',n:'Schach'},{e:'🃏',n:'Joker'},{e:'🎰',n:'Glücksspiel'},{e:'🏆',n:'Pokal'},{e:'🥇',n:'Gold'},
+      {e:'🥊',n:'Boxen'},{e:'🤺',n:'Fechten'},{e:'🏋️‍♂️',n:'Gewichtheben'},{e:'🧗‍♂️',n:'Klettern'},{e:'🤸‍♂️',n:'Turnen'},
+    ]
+  },
+  '🎨 Kreativ': {
+    items: [
+      {e:'🎨',n:'Künstler'},{e:'🎵',n:'Musik'},{e:'🎸',n:'Gitarre'},{e:'🥁',n:'Schlagzeug'},{e:'🎹',n:'Piano'},
+      {e:'🎤',n:'Sänger'},{e:'🎧',n:'DJ'},{e:'🎬',n:'Regisseur'},{e:'📸',n:'Fotograf'},{e:'✏️',n:'Schreiber'},
+      {e:'🖌️',n:'Maler'},{e:'💻',n:'Coder'},{e:'🔬',n:'Wissenschaftler'},{e:'🧪',n:'Chemiker'},{e:'📚',n:'Bücherwurm'},
+      {e:'🎓',n:'Student'},{e:'👨‍🍳',n:'Koch'},{e:'🧑‍🌾',n:'Bauer'},{e:'👨‍⚕️',n:'Arzt'},{e:'🧑‍🔧',n:'Mechaniker'},
+      {e:'👨‍🎨',n:'Grafiker'},{e:'🧑‍💻',n:'Entwickler'},{e:'🎙️',n:'Podcaster'},{e:'📡',n:'Hacker'},{e:'🚀',n:'Raketenmann'},
+    ]
+  },
+  '😎 Cool': {
+    items: [
+      {e:'😎',n:'Coolguy'},{e:'🤩',n:'Star'},{e:'🥳',n:'Partylöwe'},{e:'🤠',n:'Cowboy'},{e:'🥸',n:'Verkleidung'},
+      {e:'😈',n:'Teufel'},{e:'👿',n:'Böser'},{e:'😇',n:'Engel'},{e:'🤡',n:'Clown'},{e:'💪',n:'Muskel'},
+      {e:'🦾',n:'Cyborg'},{e:'👁️',n:'Auge'},{e:'👄',n:'Lippen'},{e:'💋',n:'Kuss'},{e:'🧠',n:'Gehirn'},
+      {e:'👣',n:'Fußstapfen'},{e:'💨',n:'Wind'},{e:'🌀',n:'Wirbel'},{e:'💥',n:'Explosion'},{e:'✨',n:'Magie'},
+      {e:'🎆',n:'Feuerwerk'},{e:'🌠',n:'Sternschnuppe'},{e:'🔥',n:'Flamme'},{e:'💯',n:'Perfekt'},{e:'⚡',n:'Power'},
+    ]
+  },
+};
+
+// CUSTOM SMILIES
+const SMILIES = [
+  {code:'1wg',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/1_WG.jpg'},
+  {code:'1dom',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/1Dom.gif'},
+  {code:'2wghaus',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/2_WGHAUS.png'},
+  {code:'ak11',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/AK11.png'},
+  {code:'alles',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Alles.gif'},
+  {code:'anwalt',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Anwalt.png'},
+  {code:'bambam',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bambam.gif'},
+  {code:'berlin',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/berlin.gif'},
+  {code:'betrug',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Betrug.jpg'},
+  {code:'bewohner', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bewohner.jpg'},
+  {code:'bienchen', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bienchen.gif'},
+  {code:'bier',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bier.gif'},
+  {code:'bitch',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bitch.gif'},
+  {code:'blau',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Blau.gif'},
+  {code:'blow',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/blow.gif'},
+  {code:'bp',       url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/BP.jpg'},
+  {code:'brav',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/brav.gif'},
+  {code:'bro',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bro.jpg'},
+  {code:'budda',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Budda.gif'},
+  {code:'buzzer',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Buzzer.jpg'},
+  {code:'cool1',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool1.gif'},
+  {code:'cool2',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool2.gif'},
+  {code:'cr7',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/CR7.gif'},
+  {code:'dart',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Dart1.gif'},
+  {code:'deal',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Deal.jpg'},
+  {code:'dom',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Dom.png'},
+  {code:'doktor',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Doktor.gif'},
+  {code:'eis',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Eis4.gif'},
+  {code:'ente',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ente.gif'},
+  {code:'fifa',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fifa.png'},
+  {code:'fisch',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fisch.png'},
+  {code:'five',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/five.jpg'},
+  {code:'flieger',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Flieger.gif'},
+  {code:'fokel',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fokel.gif'},
+  {code:'frag',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/frag.png'},
+  {code:'g8t',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/g8t.gif'},
+  {code:'gabe',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gabe.gif'},
+  {code:'gelb',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gelb.jpg'},
+  {code:'grins',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/grins.gif'},
+  {code:'gross',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gross.jpg'},
+  {code:'gruebel',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gruebel.gif'},
+  {code:'gut',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Gut.jpg'},
+  {code:'hok1',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Hok1.gif'},
+  {code:'kalender', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Kalender.png'},
+  {code:'klein',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/klein.png'},
+  {code:'klug',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/klug.gif'},
+  {code:'kochen',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Kochen.gif'},
+  {code:'kzg',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/KzG.jpg'},
+  {code:'leicht',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Leicht.png'},
+  {code:'loewe',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Loewe.gif'},
+  {code:'lol',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Lol.gif'},
+  {code:'ninja',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ninja.gif'},
+  {code:'ohle',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ohle.png'},
+  {code:'pa',       url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pa.jpg'},
+  {code:'panda',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda.jpg'},
+  {code:'panda2',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda2.jpg'},
+  {code:'panda6',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda6.gif'},
+  {code:'pauke',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pauke.gif'},
+  {code:'phidi',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Phidi.gif'},
+  {code:'pink',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pink.png'},
+  {code:'pizza',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pizza.jpg'},
+  {code:'pokal',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pokal.gif'},
+  {code:'puste',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Puste.gif'},
+  {code:'rad',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Rad.gif'},
+  {code:'radt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Radt.gif'},
+  {code:'raus',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Raus.jpg'},
+  {code:'reiten',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Reiten1.gif'},
+  {code:'rot',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/rot.jpg'},
+  {code:'sch',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/sch.gif'},
+  {code:'schleimer',url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/schleimer.gif'},
+  {code:'sekt2',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Sekt2.gif'},
+  {code:'spank',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/spank.gif'},
+  {code:'spd',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPD.jpg'},
+  {code:'spdt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPDt.jpg'},
+  {code:'tages',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tages.jpg'},
+  {code:'tanzen',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tanzen.gif'},
+  {code:'tee',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tee.jpg'},
+  {code:'telefon',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Telefon.gif'},
+  {code:'tor',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor.gif'},
+  {code:'tor3',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor3.gif'},
+  {code:'tor4',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor4.gif'},
+  {code:'trillan',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Trillan.jpg'},
+  {code:'trump',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Trump.gif'},
+  {code:'was',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/was.gif'},
+  {code:'weiter',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/weiter.png'},
+  {code:'zug',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Zug1.gif'},
+  {code:'zwerg',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/zwerg.gif'},
+];
+
+function parseSmilies(text){
+  if(!text) return text;
+  // Split on smilie codes, escape text parts, replace codes with images
+  let result = esc(text);
+  SMILIES.forEach(s=>{
+    const escaped = ':'+s.code;
+    const regex = new RegExp(escaped+'(?=\\s|$|[^a-zA-Z0-9])','gi');
+    result = result.replace(regex, `<img src="${s.url}" class="custom-smilie" title=":${s.code}" alt=":${s.code}">`);
+  });
+  return result;
+}
+
+function toggleSmiliePanel(){
+  const p=document.getElementById('smiliePanel');
+  p.classList.toggle('open');
+  document.getElementById('emojiPanel')?.classList.remove('open');
+}
+
+function buildSmiliePanel(){
+  const grid=document.getElementById('smilieGrid');
+  if(grid.children.length>0) return;
+  SMILIES.forEach(s=>{
+    const item=document.createElement('div');
+    item.className='smilie-item';
+    item.title=':'+s.code;
+    item.innerHTML=`<img src="${s.url}" alt="${s.code}"><span>:${s.code}</span>`;
+    item.onclick=()=>insertSmilie(s.code);
+    grid.appendChild(item);
+  });
+}
+
+function insertSmilie(code){
+  const inp=document.getElementById('msgInput');
+  const pos=inp.selectionStart,val=inp.value;
+  const insert=':'+code+' ';
+  inp.value=val.slice(0,pos)+insert+val.slice(pos);
+  inp.selectionStart=inp.selectionEnd=pos+insert.length;
+  inp.focus();updateChar();
+}
+
+// THEMES
+const THEMES = [
+  {name:'Lila',  bg:'linear-gradient(135deg,#7c3aed,#5b21b6)',av:'#7c3aed',tx:'white'},
+  {name:'Pink',  bg:'linear-gradient(135deg,#ec4899,#be185d)',av:'#ec4899',tx:'white'},
+  {name:'Blau',  bg:'linear-gradient(135deg,#3b82f6,#1d4ed8)',av:'#3b82f6',tx:'white'},
+  {name:'Grün',  bg:'linear-gradient(135deg,#22c55e,#15803d)',av:'#22c55e',tx:'white'},
+  {name:'Orange',bg:'linear-gradient(135deg,#f97316,#c2410c)',av:'#f97316',tx:'white'},
+  {name:'Rot',   bg:'linear-gradient(135deg,#ef4444,#b91c1c)',av:'#ef4444',tx:'white'},
+  {name:'Türkis',bg:'linear-gradient(135deg,#06b6d4,#0e7490)',av:'#06b6d4',tx:'white'},
+  {name:'Gold',  bg:'linear-gradient(135deg,#f59e0b,#b45309)',av:'#f59e0b',tx:'white'},
+  {name:'Neon',  bg:'linear-gradient(135deg,#c8ff00,#84cc16)',av:'#c8ff00',tx:'#0a0a0f'},
+  {name:'Rosé',  bg:'linear-gradient(135deg,#f472b6,#e879f9)',av:'#f472b6',tx:'white'},
+  {name:'Indigo',bg:'linear-gradient(135deg,#6366f1,#4338ca)',av:'#6366f1',tx:'white'},
+  {name:'Smaragd',bg:'linear-gradient(135deg,#10b981,#047857)',av:'#10b981',tx:'white'},
+];
+
+// EMOJIS
+const EMOJIS = {
+  smileys:['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😔','😪','😴','😷','🤒','🤕','🤢','🤮','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡'],
+  hearts:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','✨','💫','⭐','🌟','🔥','🌈','☀️','🌤️','⛅','🌦️','🌧️','⛈️','❄️','☃️','⛄','💧','💦','☔','🌊'],
+  hands:['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','💪','🦾'],
+  nature:['🌱','🌿','☘️','🍀','🎋','🍃','🍂','🍁','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌙','🌌','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🦁','🐯','🦈','🐬','🐳','🦋','🐝','🦄','🐙','🦅','🦚','🦜'],
+  food:['🍕','🍔','🍟','🌭','🍿','🥓','🥚','🍳','🧇','🥞','🍞','🥐','🥖','🧀','🥗','🥙','🥪','🌮','🌯','🍜','🍝','🍛','🍲','🍱','🍣','🍙','🍚','🍥','🧁','🍰','🎂','🍭','🍬','🍫','🍩','🍪','🍯','☕','🍵','🧋','🍺','🍻','🥂','🍷','🥃','🍸','🍹'],
+  activity:['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','⛳','🎯','🎮','🎲','🧩','🃏','🎭','🎨','🎬','🎤','🎧','🎼','🎵','🎶','🎸','🥁','🎷','🎺','🎻','🎹','💻','📱','🔭','🔬','🏆','🥇','🥈','🥉','🎖️'],
+  objects:['💡','🔦','🕯️','💰','💎','⚖️','🧰','🔧','🔨','⚙️','🔗','🧲','💣','🗡️','⚔️','🛡️','🪞','🛋️','🚽','🚿','🛁','🧴','🧹','🧺','🧻','🧼','🧸','🪄','🎁','🎀','🎊','🎉','🎈','✨','🎆','🎇'],
+  symbols:['🔥','💯','✅','❌','❓','❗','💤','💬','💭','🗯️','♻️','🔞','🚫','⛔','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🔶','🔷','🔸','🔹','⭐','🌟','💫','✨','⚡','🌀','🎵','🎶','💹','⚠️','🚧','🏁','🚩'],
+};
+
+let currentUser = null, subscription = null, pendingFile = null;
+let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
+
+// BUILD AVATAR PICKER
+(function(){
+  const tabs = document.getElementById('avatarTabs');
+  const grid = document.getElementById('avatarGrid');
+  let firstCat = true;
+  Object.keys(AVATAR_CATS).forEach(cat => {
+    const tab = document.createElement('button');
+    tab.className = 'avatar-tab' + (firstCat?' active':'');
+    tab.textContent = cat;
+    tab.onclick = () => {
+      document.querySelectorAll('.avatar-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      buildAvatarGrid(cat);
+    };
+    tabs.appendChild(tab);
+    if(firstCat) buildAvatarGrid(cat);
+    firstCat = false;
+  });
+})();
+
+function buildAvatarGrid(cat) {
+  const grid = document.getElementById('avatarGrid');
+  grid.innerHTML = '';
+  AVATAR_CATS[cat].items.forEach(av => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-option' + (av.e===selectedAvatar.e?' selected':'');
+    btn.textContent = av.e;
+    btn.title = av.n;
+    btn.onclick = () => {
+      selectedAvatar = av;
+      document.querySelectorAll('.avatar-option').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('avatarPreviewBig').textContent = av.e;
+      document.getElementById('avatarPreviewName').textContent = av.n;
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// BUILD COLOR PICKER
+(function(){
+  const row = document.getElementById('colorPicker');
+  THEMES.forEach((t,i) => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch'+(i===0?' selected':'');
+    sw.style.background = t.bg;
+    sw.title = t.name;
+    sw.onclick = () => {
+      document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));
+      sw.classList.add('selected');
+      selectedColor = i;
+      document.getElementById('colorLabel').textContent = t.name;
+    };
+    row.appendChild(sw);
+  });
+})();
+
+// MODAL NAV
+function showLogin(){ s('guestView',0);s('loginView',1);s('registerView',0); }
+function showRegister(){ s('guestView',0);s('loginView',0);s('registerView',1); }
+function showGuest(){ s('guestView',1);s('loginView',0);s('registerView',0); }
+function s(id,show){ document.getElementById(id).style.display=show?'block':'none'; }
+function showError(id,msg){ const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000); }
+
+// AUTH
+async function joinAsGuest(){
+  const name=document.getElementById('guestName').value.trim();
+  if(!name||name.length<2) return showError('guestError','Bitte gib einen Namen ein (mind. 2 Zeichen).');
+  currentUser={name,isGuest:true,id:'guest_'+Math.random().toString(36).substr(2,9),colorIndex:null,avatar:'👤'};
+  startApp();
+}
+
+async function login(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPassword').value;
+  if(!email||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error) return showError('loginError','Login fehlgeschlagen: '+error.message);
+  const m=data.user.user_metadata;
+  currentUser={name:m.display_name||email.split('@')[0],isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
+  startApp();
+}
+
+async function register(){
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPassword').value;
+  if(!name||!email||!pass) return showError('regError','Bitte alle Felder ausfüllen.');
+  if(pass.length<6) return showError('regError','Passwort mindestens 6 Zeichen.');
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name,color_index:selectedColor,avatar:selectedAvatar.e}}});
+  if(error) return showError('regError','Fehler: '+error.message);
+  currentUser={name,isGuest:false,id:data.user.id,colorIndex:selectedColor,avatar:selectedAvatar.e};
+  startApp();
+}
+
+async function logout(){
+  if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
+  if(!currentUser.isGuest) await sb.auth.signOut();
+  currentUser=null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('messagesArea').innerHTML='<div class="welcome-msg" id="welcomeMsg"><h3>👋 Willkommen im WG-Treffpunkt!</h3><p>Sei der Erste der schreibt – oder warte auf andere.</p></div>';
+  showGuest();
+}
+
+// APP
+function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
+
+function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
+function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
+
+function startApp(){
+  document.getElementById('authOverlay').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('emojiPanel')?.classList.remove('open');
+  document.getElementById('smiliePanel')?.classList.remove('open');
+  clearUpload();
+  const t=theme(currentUser.colorIndex);
+  const av=document.getElementById('headerAvatar');
+  av.textContent=currentUser.avatar||'👤';
+  if(t){ av.style.background=t.av; av.style.color=t.tx; }
+  else { av.style.background='rgba(55,65,81,0.5)'; }
+  document.getElementById('headerName').textContent=currentUser.name;
+  const roleEl=document.getElementById('headerRole');
+  if(roleEl) roleEl.textContent=currentUser.isGuest?'👤 Gast':'⭐ Member';
+  const msgInput=document.getElementById('msgInput');
+  if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
+  loadMessages();
+  subscribeMessages();
+}
+
+// MESSAGES
+function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+
+function renderMsg(msg){
+  const isOwn=msg.user_id===currentUser.id;
+  const isGuest=msg.user_id&&msg.user_id.startsWith('guest_');
+  const t=theme(msg.color_index);
+  const avatarEmoji=msg.avatar||(isGuest?'👤':'⭐');
+
+  // Avatar style
+  let avStyle='';
+  if(t){ avStyle=`background:${t.av};color:${t.tx}`; }
+  else if(isGuest){ avStyle='background:linear-gradient(135deg,#374151,#6b7280)'; }
+  else { avStyle='background:linear-gradient(135deg,#7c3aed,#5b21b6)'; }
+  const avClass=`msg-avatar${(!t&&isGuest)?' guest-style':''}`;
+
+  // Bubble content
+  let bubbleContent=msg.content?parseSmilies(msg.content):'';
+  if(msg.media_url){
+    const isVid=msg.media_type&&msg.media_type.startsWith('video');
+    bubbleContent+=isVid
+      ?`<video src="${msg.media_url}" controls></video>`
+      :`<img src="${msg.media_url}" onclick="openLB('${msg.media_url}')" alt="Bild">`;
+  }
+
+  // Bubble style for own messages
+  let bubbleStyle='';
+  if(isOwn){
+    bubbleStyle=t
+      ?`style="background:${t.bg};border-color:transparent;color:${t.tx}"`
+      :`style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-color:transparent;color:white"`;
+  }
+
+  const reactions=msg.reactions||{};
+  const reactionHtml=Object.entries(reactions).map(([emoji,users])=>{
+    const mine=users.includes(currentUser.id);
+    return `<button class="reaction-btn${mine?' mine':''}" onclick="toggleReaction(${msg.id},'${emoji}')">${emoji} <span class="reaction-count">${users.length}</span></button>`;
+  }).join('');
+
+  const el=document.createElement('div');
+  el.className='message'+(isOwn?' own':'');
+  el.dataset.msgId=msg.id;
+  el.innerHTML=`
+    <div class="msg-avatar-wrap">
+      <div class="${avClass}" style="${avStyle}" title="${esc(msg.user_name||'Gast')}">${avatarEmoji}</div>
+      <div class="msg-avatar-name">${esc(msg.user_name||'Gast')}</div>
+    </div>
+    <div class="msg-content">
+      <div class="msg-wrap">
+        <div class="msg-actions">
+          <button class="action-btn action-react" onclick="showReactPicker(event,${msg.id})">😊</button>
+          ${isOwn?`<button class="action-btn" onclick="deleteMsg(${msg.id})">🗑️</button>`:''}
+        </div>
+        <div class="msg-bubble" ${bubbleStyle}>${bubbleContent}</div>
+      </div>
+      ${reactionHtml?`<div class="msg-reactions">${reactionHtml}</div>`:''}
+      <div class="msg-time">${timeStr(msg.created_at)}</div>
+    </div>`;
+  return el;
+}
+
+function esc(t){ if(!t)return'';return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// CUSTOM SMILIES
+
+function parseSmilies(text){
+  if(!text) return text;
+  // Split on smilie codes, escape text parts, replace codes with images
+  let result = esc(text);
+  SMILIES.forEach(s=>{
+    const escaped = ':'+s.code;
+    const regex = new RegExp(escaped+'(?=\\s|$|[^a-zA-Z0-9])','gi');
+    result = result.replace(regex, `<img src="${s.url}" class="custom-smilie" title=":${s.code}" alt=":${s.code}">`);
+  });
+  return result;
+}
+
+function toggleSmiliePanel(){
+  const p=document.getElementById('smiliePanel');
+  p.classList.toggle('open');
+  document.getElementById('emojiPanel')?.classList.remove('open');
+}
+
+function buildSmiliePanel(){
+  const grid=document.getElementById('smilieGrid');
+  if(grid.children.length>0) return;
+  SMILIES.forEach(s=>{
+    const item=document.createElement('div');
+    item.className='smilie-item';
+    item.title=':'+s.code;
+    item.innerHTML=`<img src="${s.url}" alt="${s.code}"><span>:${s.code}</span>`;
+    item.onclick=()=>insertSmilie(s.code);
+    grid.appendChild(item);
+  });
+}
+
+function insertSmilie(code){
+  const inp=document.getElementById('msgInput');
+  const pos=inp.selectionStart,val=inp.value;
+  const insert=':'+code+' ';
+  inp.value=val.slice(0,pos)+insert+val.slice(pos);
+  inp.selectionStart=inp.selectionEnd=pos+insert.length;
+  inp.focus();updateChar();
+}
+
+// THEME
+let isDark=true;
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light',!isDark);
+  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
+}
+
+// FONT SIZE
+const fontSizes=['font-sm','font-md','font-lg'];
+let fontIdx=1;
+function cycleFontSize(){
+  document.body.classList.remove(...fontSizes);
+  fontIdx=(fontIdx+1)%3;
+  document.body.classList.add(fontSizes[fontIdx]);
+  const labels=['A','A+','A++'];
+  document.getElementById('fontBtn').textContent=labels[fontIdx];
+}
+document.body.classList.add('font-md');
+
+// REACTIONS
+const REACT_EMOJIS=['👍','❤️','😂','😮','😢','😡'];
+function showReactPicker(e,msgId){
+  e.stopPropagation();
+  document.querySelectorAll('.reaction-picker').forEach(p=>p.remove());
+  const picker=document.createElement('div');
+  picker.className='reaction-picker';
+  picker.style.cssText=`position:fixed;top:${e.clientY-50}px;left:${e.clientX-20}px`;
+  REACT_EMOJIS.forEach(em=>{
+    const btn=document.createElement('button');
+    btn.textContent=em;
+    btn.onclick=(ev)=>{ev.stopPropagation();toggleReaction(msgId,em);picker.remove();};
+    picker.appendChild(btn);
+  });
+  document.body.appendChild(picker);
+  setTimeout(()=>document.addEventListener('click',()=>picker.remove(),{once:true}),100);
+}
+
+async function toggleReaction(msgId,emoji){
+  const {data}=await sb.from('messages').select('reactions').eq('id',msgId).single();
+  const reactions=data?.reactions||{};
+  const users=reactions[emoji]||[];
+  if(users.includes(currentUser.id)){
+    reactions[emoji]=users.filter(u=>u!==currentUser.id);
+    if(reactions[emoji].length===0) delete reactions[emoji];
+  } else {
+    reactions[emoji]=[...users,currentUser.id];
+  }
+  await sb.from('messages').update({reactions}).eq('id',msgId);
+  // Re-render reactions
+  const {data:updated}=await sb.from('messages').select('reactions').eq('id',msgId).single();
+  const msgEl=document.querySelector(`[data-msg-id="${msgId}"] .msg-reactions`);
+  if(msgEl){
+    const r=updated?.reactions||{};
+    msgEl.innerHTML=Object.entries(r).map(([em,us])=>{
+      const mine=us.includes(currentUser.id);
+      return `<button class="reaction-btn${mine?' mine':''}" onclick="toggleReaction(${msgId},'${em}')">${em} <span class="reaction-count">${us.length}</span></button>`;
+    }).join('');
+  }
+}
+
+async function deleteMsg(msgId){
+  if(!confirm('Nachricht löschen?')) return;
+  await sb.from('messages').delete().eq('id',msgId);
+  document.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
+}
+
+// Session-Startzeit – nur Nachrichten ab jetzt laden
+const SESSION_START = new Date().toISOString();
+
+async function loadMessages(){
+  const {data,error}=await sb.from('messages').select('*')
+    .gte('created_at', SESSION_START)
+    .order('created_at',{ascending:true}).limit(100);
+  if(error){ console.log('DB:',error.message);return; }
+  const area=document.getElementById('messagesArea');
+  if(data&&data.length>0){
+    document.getElementById('welcomeMsg')?.remove();
+    data.forEach(m=>area.appendChild(renderMsg(m)));
+    area.scrollTop=area.scrollHeight;
+  }
+}
+
+function subscribeMessages(){
+  const channel = sb.channel('wg-treffpunkt-room');
+  
+  // Presence für Online-User
+  channel.on('presence',{event:'sync'},()=>{
+    const state=channel.presenceState();
+    const users=Object.values(state).flat();
+    renderOnlineUsers(users);
+  });
+
+  // Neue Nachrichten
+  channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},(payload)=>{
+    const msgEl=document.querySelector(`[data-msg-id="${payload.new.id}"]`);
+    if(msgEl){
+      const r=payload.new.reactions||{};
+      let reactDiv=msgEl.querySelector('.msg-reactions');
+      const html=Object.entries(r).map(([em,us])=>{
+        const mine=us.includes(currentUser.id);
+        return `<button class="reaction-btn${mine?' mine':''}" onclick="toggleReaction(${payload.new.id},'${em}')">${em} <span class="reaction-count">${us.length}</span></button>`;
+      }).join('');
+      if(reactDiv){ reactDiv.innerHTML=html; }
+      else if(html){ const d=document.createElement('div');d.className='msg-reactions';d.innerHTML=html;msgEl.querySelector('.msg-time').before(d); }
+    }
+  });
+  channel.on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},(payload)=>{
+    document.querySelector(`[data-msg-id="${payload.old.id}"]`)?.remove();
+  });
+  channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},(payload)=>{
+    const area=document.getElementById('messagesArea');
+    document.getElementById('welcomeMsg')?.remove();
+    area.appendChild(renderMsg(payload.new));
+    area.scrollTop=area.scrollHeight;
+  });
+
+  channel.subscribe(async(status)=>{
+    if(status==='SUBSCRIBED'){
+      await channel.track({
+        name: currentUser.name,
+        avatar: currentUser.avatar||'👤',
+        color: currentUser.colorIndex,
+        isGuest: currentUser.isGuest,
+        online_at: new Date().toISOString()
+      });
+    }
+  });
+  
+  subscription = channel;
+}
+
+function renderOnlineUsers(users){
+  const list=document.getElementById('onlineList');
+  list.innerHTML='';
+  users.forEach(u=>{
+    const t=u.color!==null&&u.color!==undefined?THEMES[u.color]:null;
+    const avStyle=t?`background:${t.av};color:${t.tx}`:`background:linear-gradient(135deg,#374151,#6b7280)`;
+    const div=document.createElement('div');
+    div.className='online-user';
+    div.innerHTML=`
+      <div class="online-user-avatar" style="${avStyle}">${u.avatar||'👤'}</div>
+      <div class="online-user-name">${u.name||'Gast'}${u.isGuest?'':' ⭐'}</div>`;
+    list.appendChild(div);
+  });
+  // Update count in title
+  const title=document.querySelector('.online-sidebar-title');
+  if(title) title.textContent=`👥 Online (${users.length})`;
+}
+
+async function sendMessage(){
+  const input=document.getElementById('msgInput');
+  const content=input.value.trim();
+  if(!content&&!pendingFile) return;
+  let media_url=null,media_type=null;
+  if(pendingFile){
+    const ext=pendingFile.name.split('.').pop();
+    const fname=`${currentUser.id}_${Date.now()}.${ext}`;
+    const {error:ue}=await sb.storage.from('chat-media').upload(fname,pendingFile,{cacheControl:'3600',upsert:false});
+    if(!ue){ const {data:ud}=sb.storage.from('chat-media').getPublicUrl(fname);media_url=ud.publicUrl;media_type=pendingFile.type; }
+    clearUpload();
+  }
+  input.value='';updateChar();
+  const payload={
+    content:content||null,user_id:currentUser.id,user_name:currentUser.name,
+    is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
+    avatar:currentUser.avatar||null,media_url,media_type
+  };
+  const {error}=await sb.from('messages').insert(payload);
+  if(error){
+    console.error('Send:',error);
+    const area=document.getElementById('messagesArea');
+    document.getElementById('welcomeMsg')?.remove();
+    area.appendChild(renderMsg({...payload,created_at:new Date().toISOString()}));
+    area.scrollTop=area.scrollHeight;
+  }
+}
+
+function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function updateChar(){ document.getElementById('charCount').textContent=`${document.getElementById('msgInput').value.length} / 2000`; }
+
+// FILE UPLOAD
+function onFileSelect(e){
+  const file=e.target.files[0];if(!file)return;
+  pendingFile=file;
+  const thumb=document.getElementById('uploadThumb');
+  thumb.innerHTML='';
+  if(file.type.startsWith('video')){const v=document.createElement('video');v.src=URL.createObjectURL(file);v.style.cssText='height:44px;border-radius:6px';thumb.appendChild(v);}
+  else{const img=document.createElement('img');img.src=URL.createObjectURL(file);thumb.appendChild(img);}
+  document.getElementById('uploadName').textContent=file.name;
+  document.getElementById('uploadPreview').classList.add('show');
+  e.target.value='';
+}
+function clearUpload(){ pendingFile=null;document.getElementById('uploadPreview').classList.remove('show');document.getElementById('uploadThumb').innerHTML=''; }
+
+// EMOJI
+function buildEmojiGrid(tab){
+  const grid=document.getElementById('emojiGrid');
+  grid.style.display='grid';
+  grid.innerHTML='';
+  (EMOJIS[tab]||[]).forEach(em=>{
+    const btn=document.createElement('button');btn.className='emoji-btn';btn.textContent=em;
+    btn.onclick=()=>insertEmoji(em);grid.appendChild(btn);
+  });
+}
+function switchETab(tab,el){ document.querySelectorAll('.emoji-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildEmojiGrid(tab); }
+function toggleEmoji(){
+  const p=document.getElementById('emojiPanel');
+  const open=p.classList.toggle('open');
+  if(open) buildEmojiGrid('smileys');
+}
+function insertEmoji(em){
+  const inp=document.getElementById('msgInput');
+  const pos=inp.selectionStart,val=inp.value;
+  inp.value=val.slice(0,pos)+em+val.slice(pos);
+  inp.selectionStart=inp.selectionEnd=pos+em.length;
+  inp.focus();updateChar();
+}
+document.addEventListener('click',e=>{
+  const p=document.getElementById('emojiPanel');
+  if(!p.contains(e.target)&&!e.target.closest('.toolbar-btn')) p.classList.remove('open');
+  const sp=document.getElementById('smiliePanel');
+  if(sp&&!sp.contains(e.target)&&!e.target.closest('.toolbar-btn')) sp.classList.remove('open');
+});
+
+// GIF
+const GIPHY_KEY='4qqsaDpUzUenKubUbdFtGAtLrFj3RD5d';
+
+async function loadTrendingGifs(){
+  const grid=document.getElementById('gifGrid');
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Lade GIFs...</div>';
+  try{
+    const r=await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=8&rating=g`);
+    const d=await r.json();
+    if(d.data&&d.data.length>0){ showGifs(d.data); }
+    else { grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Keine GIFs gefunden.</div>'; }
+  }catch(e){
+    grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">GIFs nicht verfügbar.</div>';
+  }
+}
+
+async function searchGifs(){
+  const q=document.getElementById('gifSearch').value.trim();
+  const grid=document.getElementById('gifGrid');
+  if(!q){loadTrendingGifs();return;}
+  clearTimeout(window._gt);
+  window._gt=setTimeout(async()=>{
+    grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">Suche...</div>';
+    try{
+      const r=await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(q)}&limit=8&rating=g`);
+      const d=await r.json();showGifs(d.data||[]);
+    }catch(e){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 2">GIF-Suche nicht verfügbar.</div>';}
+  },400);
+}
+function showGifs(results){
+  const grid=document.getElementById('gifGrid');grid.innerHTML='';
+  if(!results||!results.length){grid.innerHTML='<div style="color:var(--text-muted);font-size:12px;grid-column:span 3">Keine GIFs gefunden.</div>';return;}
+  results.forEach(g=>{
+    const url=g.images?.original?.url;
+    const prev=g.images?.fixed_height_small?.url||g.images?.downsized_small?.url||url;
+    if(!url)return;
+    const item=document.createElement('div');
+    item.className='gif-item';
+    item.style.cursor='pointer';
+    const img=document.createElement('img');
+    img.src=prev;
+    img.loading='lazy';
+    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;pointer-events:none';
+    item.appendChild(img);
+    item.addEventListener('click',()=>{
+      document.getElementById('emojiPanel').classList.remove('open');
+      sendGif(url);
+    });
+    grid.appendChild(item);
+  });
+}
+async function sendGif(url){
+  document.getElementById('emojiPanel').classList.remove('open');
+  await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,media_url:url,media_type:'image/gif'});
+}
+
+// LIGHTBOX
+function openLB(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+
+// SESSION
+window.addEventListener('load',async()=>{
+  const {data}=await sb.auth.getSession();
+  if(data.session){
+    const u=data.session.user,m=u.user_metadata;
+    currentUser={name:m.display_name||u.email.split('@')[0],isGuest:false,id:u.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
+    startApp();
+  }
+});
+
+// Add avatar column to messages table if needed
+// Run this SQL in Supabase: ALTER TABLE messages ADD COLUMN IF NOT EXISTS avatar text;
+</script>
 </body>
 </html>
