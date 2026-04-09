@@ -654,22 +654,18 @@ async function joinAsGuest(){
 }
 
 async function login(){
-  const email=document.getElementById('loginEmail').value.trim();
+  let input=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPassword').value;
-  if(!email||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
-  // Try login with email directly first, then try to find by display_name
-  let loginEmail = email;
-  if(!email.includes('@')){
-    // It's a display name - search for the user's email
-    const {data:users} = await sb.from('profiles').select('email').eq('display_name', email).single();
-    if(users?.email){ loginEmail = users.email; }
-    else {
-      // Try via auth - search user_metadata
-      return showError('loginError','Chatname nicht gefunden. Bitte Email verwenden.');
-    }
+  if(!input||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
+  let loginEmail=input;
+  if(!input.includes('@')){
+    // It's a chatname - look up email in profiles table
+    const {data:profile,error:perr}=await sb.from('profiles').select('email').eq('display_name',input).single();
+    if(perr||!profile) return showError('loginError','Chatname nicht gefunden. Bitte Email verwenden.');
+    loginEmail=profile.email;
   }
   const {data,error}=await sb.auth.signInWithPassword({email:loginEmail,password:pass});
-  if(error) return showError('loginError','Login fehlgeschlagen: '+error.message);
+  if(error) return showError('loginError','Email oder Passwort falsch.');
   const m=data.user.user_metadata;
   currentUser={name:m.display_name||loginEmail.split('@')[0],isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
   startApp();
@@ -683,6 +679,8 @@ async function register(){
   if(pass.length<6) return showError('regError','Passwort mindestens 6 Zeichen.');
   const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name,color_index:selectedColor,avatar:selectedAvatar.e}}});
   if(error) return showError('regError','Fehler: '+error.message);
+  // Save to profiles table for chatname login
+  await sb.from('profiles').upsert({id:data.user.id,display_name:name,email});
   // Auto login after registration
   const {data:loginData,error:loginError}=await sb.auth.signInWithPassword({email,password:pass});
   if(loginError){
