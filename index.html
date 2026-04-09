@@ -300,52 +300,6 @@
   </div>
 </div>
 
-<!-- HILFE MODAL -->
-<div class="overlay hidden" id="hilfeOverlay" onclick="closeHilfe(event)">
-  <div class="modal" style="max-width:540px" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div class="modal-logo" style="margin:0">📖 Schnellanleitung</div>
-      <button onclick="closeHilfe()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Beitreten</div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Name eingeben &amp; beitreten</div><div style="font-size:13px;color:var(--text-muted)">Anzeigenamen eintippen → <strong>„Als Gast beitreten"</strong> klicken. Kein Account nötig!</div></div>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Nachrichten schreiben</div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Text senden</div><div style="font-size:13px;color:var(--text-muted)">Unten ins Textfeld tippen → <strong>Enter</strong> oder grüner Pfeil.</div></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Emojis &amp; Smilies</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Emoji"</strong> für normale Emojis · <strong>„Smilies"</strong> für WG-Bilder · oder tippen: <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:bier</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:lol</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:cool1</span></div></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">4</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Bild oder Video senden</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Datei"</strong> klicken → Bild/Video auswählen → senden.</div></div>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Auf Nachrichten reagieren</div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">5</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Reaktion hinzufügen</div><div style="font-size:13px;color:var(--text-muted)">Über Nachricht fahren → <strong>Smiley-Symbol</strong> → Emoji wählen.</div></div>
-      </div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
-        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">6</div>
-        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Eigene Nachricht löschen</div><div style="font-size:13px;color:var(--text-muted)">Über eigene Nachricht fahren → <strong>Mülleimer</strong> antippen.</div></div>
-      </div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Extras oben rechts</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🌙 <strong>Hell/Dunkel</strong> wechseln</div>
-        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🔤 <strong>A</strong> = Schriftgröße ändern</div>
-        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">👥 Rechts = wer ist <strong>online</strong></div>
-        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🚪 <strong>Abmelden</strong> zum Verlassen</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -365,7 +319,6 @@
       <div class="header-controls">
         <button class="ctrl-btn" onclick="toggleTheme()" id="themeBtn" title="Hell/Dunkel">🌙</button>
         <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
-        <button class="ctrl-btn" onclick="openHilfe()" title="Hilfe">❓</button>
       </div>
       <div class="user-chip">
         <div class="header-avatar" id="headerAvatar">👤</div>
@@ -519,93 +472,42 @@ const AVATAR_CATS = {
 
 // CUSTOM SMILIES
 const SMILIES = [
-  {code:'1wg',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/1_WG.jpg'},
-  {code:'1dom',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/1Dom.gif'},
-  {code:'2wghaus',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/2_WGHAUS.png'},
-  {code:'ak11',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/AK11.png'},
-  {code:'alles',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Alles.gif'},
-  {code:'anwalt',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Anwalt.png'},
-  {code:'bambam',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bambam.gif'},
-  {code:'berlin',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/berlin.gif'},
-  {code:'betrug',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Betrug.jpg'},
-  {code:'bewohner', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bewohner.jpg'},
-  {code:'bienchen', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bienchen.gif'},
-  {code:'bier',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bier.gif'},
-  {code:'bitch',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bitch.gif'},
-  {code:'blau',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Blau.gif'},
-  {code:'blow',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/blow.gif'},
-  {code:'bp',       url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/BP.jpg'},
-  {code:'brav',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/brav.gif'},
-  {code:'bro',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bro.jpg'},
-  {code:'budda',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Budda.gif'},
-  {code:'buzzer',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Buzzer.jpg'},
-  {code:'cool1',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool1.gif'},
-  {code:'cool2',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool2.gif'},
-  {code:'cr7',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/CR7.gif'},
-  {code:'dart',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Dart1.gif'},
-  {code:'deal',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Deal.jpg'},
-  {code:'dom',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Dom.png'},
-  {code:'doktor',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Doktor.gif'},
-  {code:'eis',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Eis4.gif'},
-  {code:'ente',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ente.gif'},
-  {code:'fifa',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fifa.png'},
-  {code:'fisch',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fisch.png'},
-  {code:'five',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/five.jpg'},
-  {code:'flieger',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Flieger.gif'},
-  {code:'fokel',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fokel.gif'},
-  {code:'frag',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/frag.png'},
-  {code:'g8t',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/g8t.gif'},
-  {code:'gabe',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gabe.gif'},
-  {code:'gelb',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gelb.jpg'},
-  {code:'grins',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/grins.gif'},
-  {code:'gross',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gross.jpg'},
-  {code:'gruebel',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gruebel.gif'},
-  {code:'gut',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Gut.jpg'},
-  {code:'hok1',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Hok1.gif'},
-  {code:'kalender', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Kalender.png'},
-  {code:'klein',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/klein.png'},
-  {code:'klug',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/klug.gif'},
-  {code:'kochen',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Kochen.gif'},
-  {code:'kzg',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/KzG.jpg'},
-  {code:'leicht',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Leicht.png'},
-  {code:'loewe',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Loewe.gif'},
-  {code:'lol',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Lol.gif'},
-  {code:'ninja',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ninja.gif'},
-  {code:'ohle',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ohle.png'},
-  {code:'pa',       url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pa.jpg'},
-  {code:'panda',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda.jpg'},
-  {code:'panda2',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda2.jpg'},
-  {code:'panda6',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda6.gif'},
-  {code:'pauke',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pauke.gif'},
-  {code:'phidi',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Phidi.gif'},
-  {code:'pink',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pink.png'},
-  {code:'pizza',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pizza.jpg'},
-  {code:'pokal',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pokal.gif'},
-  {code:'puste',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Puste.gif'},
-  {code:'rad',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Rad.gif'},
-  {code:'radt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Radt.gif'},
-  {code:'raus',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Raus.jpg'},
-  {code:'reiten',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Reiten1.gif'},
-  {code:'rot',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/rot.jpg'},
-  {code:'sch',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/sch.gif'},
-  {code:'schleimer',url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/schleimer.gif'},
-  {code:'sekt2',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Sekt2.gif'},
-  {code:'spank',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/spank.gif'},
-  {code:'spd',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPD.jpg'},
-  {code:'spdt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPDt.jpg'},
-  {code:'tages',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tages.jpg'},
-  {code:'tanzen',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tanzen.gif'},
-  {code:'tee',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tee.jpg'},
-  {code:'telefon',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Telefon.gif'},
-  {code:'tor',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor.gif'},
-  {code:'tor3',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor3.gif'},
-  {code:'tor4',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor4.gif'},
-  {code:'trillan',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Trillan.jpg'},
-  {code:'trump',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Trump.gif'},
-  {code:'was',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/was.gif'},
-  {code:'weiter',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/weiter.png'},
-  {code:'zug',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Zug1.gif'},
-  {code:'zwerg',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/zwerg.gif'},
+  {code:'budda',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Budda.gif'},
+  {code:'bro',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bro.jpg'},
+  {code:'anwalt',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Anwalt.png'},
+  {code:'bambam',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/bambam.gif'},
+  {code:'betrug',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Betrug.jpg'},
+  {code:'bienchen',url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Bienchen.gif'},
+  {code:'blau',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Blau.gif'},
+  {code:'cool1',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool1.gif'},
+  {code:'cool2',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/cool2.gif'},
+  {code:'deal',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Deal.jpg'},
+  {code:'doktor',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Doktor.gif'},
+  {code:'eis',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Eis4.gif'},
+  {code:'ente',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ente.gif'},
+  {code:'five',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/five.jpg'},
+  {code:'flieger', url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Flieger.gif'},
+  {code:'fokel',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Fokel.gif'},
+  {code:'frag',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/frag.png'},
+  {code:'g8t',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/g8t.gif'},
+  {code:'grins',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/grins.gif'},
+  {code:'gross',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/gross.jpg'},
+  {code:'loewe',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Loewe.gif'},
+  {code:'lol',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Lol.gif'},
+  {code:'ninja',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ninja.gif'},
+  {code:'ohle',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Ohle.png'},
+  {code:'panda2',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda2.jpg'},
+  {code:'panda6',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Panda6.gif'},
+  {code:'phidi',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Phidi.gif'},
+  {code:'puste',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Puste.gif'},
+  {code:'rad',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Rad.gif'},
+  {code:'raus',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Raus.jpg'},
+  {code:'sch',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/sch.gif'},
+  {code:'tages',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tages.jpg'},
+  {code:'tee',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tee.jpg'},
+  {code:'tor',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tor.gif'},
+  {code:'was',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/was.gif'},
+  {code:'weiter',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/weiter.png'},
 ];
 
 function parseSmilies(text){
@@ -755,10 +657,21 @@ async function login(){
   const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPassword').value;
   if(!email||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
-  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  // Try login with email directly first, then try to find by display_name
+  let loginEmail = email;
+  if(!email.includes('@')){
+    // It's a display name - search for the user's email
+    const {data:users} = await sb.from('profiles').select('email').eq('display_name', email).single();
+    if(users?.email){ loginEmail = users.email; }
+    else {
+      // Try via auth - search user_metadata
+      return showError('loginError','Chatname nicht gefunden. Bitte Email verwenden.');
+    }
+  }
+  const {data,error}=await sb.auth.signInWithPassword({email:loginEmail,password:pass});
   if(error) return showError('loginError','Login fehlgeschlagen: '+error.message);
   const m=data.user.user_metadata;
-  currentUser={name:m.display_name||email.split('@')[0],isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
+  currentUser={name:m.display_name||loginEmail.split('@')[0],isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐'};
   startApp();
 }
 
@@ -770,7 +683,13 @@ async function register(){
   if(pass.length<6) return showError('regError','Passwort mindestens 6 Zeichen.');
   const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name,color_index:selectedColor,avatar:selectedAvatar.e}}});
   if(error) return showError('regError','Fehler: '+error.message);
-  currentUser={name,isGuest:false,id:data.user.id,colorIndex:selectedColor,avatar:selectedAvatar.e};
+  // Auto login after registration
+  const {data:loginData,error:loginError}=await sb.auth.signInWithPassword({email,password:pass});
+  if(loginError){
+    showError('regError','Account erstellt! Bitte jetzt anmelden.');
+    return;
+  }
+  currentUser={name,isGuest:false,id:loginData.user.id,colorIndex:selectedColor,avatar:selectedAvatar.e};
   startApp();
 }
 
@@ -787,15 +706,9 @@ async function logout(){
 // APP
 function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
 
-function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
-function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
-
 function startApp(){
   document.getElementById('authOverlay').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
-  document.getElementById('emojiPanel')?.classList.remove('open');
-  document.getElementById('smiliePanel')?.classList.remove('open');
-  clearUpload();
   const t=theme(currentUser.colorIndex);
   const av=document.getElementById('headerAvatar');
   av.textContent=currentUser.avatar||'👤';
