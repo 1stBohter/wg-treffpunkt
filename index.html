@@ -300,6 +300,52 @@
   </div>
 </div>
 
+<!-- HILFE MODAL -->
+<div class="overlay hidden" id="hilfeOverlay" onclick="closeHilfe(event)">
+  <div class="modal" style="max-width:540px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-logo" style="margin:0">📖 Schnellanleitung</div>
+      <button onclick="closeHilfe()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Beitreten</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Name eingeben &amp; beitreten</div><div style="font-size:13px;color:var(--text-muted)">Anzeigenamen eintippen → <strong>„Als Gast beitreten"</strong> klicken. Kein Account nötig!</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Nachrichten schreiben</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Text senden</div><div style="font-size:13px;color:var(--text-muted)">Unten ins Textfeld tippen → <strong>Enter</strong> oder grüner Pfeil.</div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Emojis &amp; Smilies</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Emoji"</strong> für normale Emojis · <strong>„Smilies"</strong> für WG-Bilder · oder tippen: <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:bier</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:lol</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-family:monospace">:cool1</span></div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">4</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Bild oder Video senden</div><div style="font-size:13px;color:var(--text-muted)"><strong>„Datei"</strong> klicken → Bild/Video auswählen → senden.</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Auf Nachrichten reagieren</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">5</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Reaktion hinzufügen</div><div style="font-size:13px;color:var(--text-muted)">Über Nachricht fahren → <strong>Smiley-Symbol</strong> → Emoji wählen.</div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(200,255,0,0.15);color:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">6</div>
+        <div><div style="font-weight:600;font-size:14px;margin-bottom:2px">Eigene Nachricht löschen</div><div style="font-size:13px;color:var(--text-muted)">Über eigene Nachricht fahren → <strong>Mülleimer</strong> antippen.</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Extras oben rechts</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🌙 <strong>Hell/Dunkel</strong> wechseln</div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🔤 <strong>A</strong> = Schriftgröße ändern</div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">👥 Rechts = wer ist <strong>online</strong></div>
+        <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🚪 <strong>Abmelden</strong> zum Verlassen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -319,6 +365,7 @@
       <div class="header-controls">
         <button class="ctrl-btn" onclick="toggleTheme()" id="themeBtn" title="Hell/Dunkel">🌙</button>
         <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
+        <button class="ctrl-btn" onclick="openHilfe()" title="Hilfe">❓</button>
       </div>
       <div class="user-chip">
         <div class="header-avatar" id="headerAvatar">👤</div>
@@ -538,7 +585,7 @@ const SMILIES = [
   {code:'rad',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Rad.gif'},
   {code:'radt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Radt.gif'},
   {code:'raus',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Raus.jpg'},
-  {code:'reltent',  url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Reiten1.gif'},
+  {code:'reiten',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Reiten1.gif'},
   {code:'rot',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/rot.jpg'},
   {code:'sch',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/sch.gif'},
   {code:'schleimer',url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/schleimer.gif'},
@@ -557,7 +604,7 @@ const SMILIES = [
   {code:'trump',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Trump.gif'},
   {code:'was',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/was.gif'},
   {code:'weiter',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/weiter.png'},
-  {code:'zugt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Zug1.gif'},
+  {code:'zug',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Zug1.gif'},
   {code:'zwerg',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/zwerg.gif'},
 ];
 
@@ -739,6 +786,9 @@ async function logout(){
 
 // APP
 function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
+
+function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
+function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
 
 function startApp(){
   document.getElementById('authOverlay').classList.add('hidden');
