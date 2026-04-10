@@ -747,16 +747,6 @@ function showError(id,msg){ const el=document.getElementById(id);el.textContent=
 async function joinAsGuest(){
   const name=document.getElementById('guestName').value.trim();
   if(!name||name.length<2) return showError('guestError','Bitte gib einen Namen ein (mind. 2 Zeichen).');
-  // Prüfen ob Name bereits im Chat vergeben
-  try{
-    const tmpCh=sb.channel('wg-treffpunkt-room');
-    await new Promise(res=>setTimeout(res,700));
-    const state=tmpCh.presenceState();
-    const onlineNames=Object.values(state).flat().map(u=>(u.name||'').toLowerCase());
-    if(onlineNames.includes(name.toLowerCase())){
-      return showError('guestError','❌ Name bereits vergeben! Bitte wähle einen anderen Namen.');
-    }
-  }catch(e){}
   currentUser={name,isGuest:true,id:'guest_'+Math.random().toString(36).substr(2,9),colorIndex:null,avatar:'👤'};
   startApp();
 }
@@ -1051,6 +1041,22 @@ function subscribeMessages(){
         isGuest: currentUser.isGuest,
         online_at: new Date().toISOString()
       });
+      // Nach kurzer Wartezeit auf doppelte Namen prüfen
+      setTimeout(()=>{
+        const state=channel.presenceState();
+        const allUsers=Object.values(state).flat();
+        const myName=currentUser.name.toLowerCase();
+        const doppelt=allUsers.filter(u=>(u.name||'').toLowerCase()===myName);
+        if(doppelt.length>1 && currentUser.isGuest){
+          channel.untrack();
+          channel.unsubscribe();
+          currentUser=null;
+          document.getElementById('app').classList.remove('visible');
+          document.getElementById('authOverlay').classList.remove('hidden');
+          showGuest();
+          setTimeout(()=>showError('guestError','❌ Name bereits vergeben! Bitte wähle einen anderen Namen.'),100);
+        }
+      },1500);
     }
   });
   
