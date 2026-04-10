@@ -1184,10 +1184,12 @@ function startApp(){
   playLoginSound();
   document.getElementById('authOverlay').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
-  document.getElementById('emojiPanel')?.classList.remove('open');
-  document.getElementById('smiliePanel')?.classList.remove('open');
+  const ep=document.getElementById('emojiPanel');
+  if(ep){ ep.classList.remove('open'); ep.style.display=''; }
+  const sp=document.getElementById('smiliePanel');
+  if(sp){ sp.classList.remove('open'); sp.style.display='none'; }
   const wi=document.getElementById('whisperIndicator');
-  if(wi){ wi.classList.remove('show'); wi.style.display='none'; setTimeout(()=>wi.style.display='',100); }
+  if(wi){ wi.classList.remove('show'); }
   clearUpload();
   pendingFile=null;
   const t=theme(currentUser.colorIndex);
