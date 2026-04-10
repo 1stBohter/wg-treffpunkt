@@ -1026,7 +1026,7 @@ const EMOJIS = {
 };
 
 let currentUser = null, subscription = null, pendingFile = null;
-const SUPERADMINS = ['pampersbengel_oleg']; // Diese Namen können nicht entfernt werden
+const SUPERADMINS = ['pampersbengel_oleg','daddy_dominik']; // Diese Namen können nicht entfernt werden
 const knebelList = {};
 let currentRoom = 'hauptchat'; // Aktueller Raum // { name_lowercase: timestamp_until }
 let selectedColor = 0, selectedAvatar = {e:'🐺', n:'Wolf'};
@@ -1665,6 +1665,7 @@ async function handleCommand(content){
       targetName = nameParts.slice(0,-1).join(' ').trim();
     }
     if(!targetName){ showChatInfo('❌ Bitte einen Namen angeben: /knebel Name [1-5 Minuten]'); return true; }
+    if(SUPERADMINS.includes(targetName.toLowerCase())){ showChatInfo('❌ Superadmins können nicht geknebelt werden!'); return true; }
     const until = new Date(Date.now() + minutes * 60000).toISOString();
     // Alten Eintrag löschen falls vorhanden
     await sb.from('gagged_users').delete().ilike('user_name', targetName);
