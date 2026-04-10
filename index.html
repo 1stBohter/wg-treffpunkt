@@ -1186,6 +1186,7 @@ function startApp(){
   document.getElementById('app').classList.add('visible');
   document.getElementById('emojiPanel')?.classList.remove('open');
   document.getElementById('smiliePanel')?.classList.remove('open');
+  document.getElementById('whisperIndicator')?.classList.remove('show');
   clearUpload();
   const t=theme(currentUser.colorIndex);
   const av=document.getElementById('headerAvatar');
