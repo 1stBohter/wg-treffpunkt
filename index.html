@@ -235,7 +235,7 @@
   .smilie-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:6px; }
   .smilie-item { display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px;border-radius:10px;transition:background 0.15s;border:1px solid transparent; }
   .smilie-item:hover { background:var(--surface2);border-color:var(--border); }
-  .smilie-item img { width:40px;height:40px;object-fit:contain; }
+  .smilie-item img { width:56px;height:56px;object-fit:contain; }
   .smilie-item span { font-size:10px;color:var(--text-muted);text-align:center;word-break:break-all; }
   .msg-bubble img.custom-smilie { width:40px;height:40px;object-fit:contain;vertical-align:middle;display:inline;margin:0 2px;border-radius:4px; }
   .reaction-picker { position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 8px;display:flex;gap:4px;z-index:20;box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:popIn 0.15s ease; }
@@ -311,7 +311,7 @@
   .emoji-grid { display:grid;grid-template-columns:repeat(8,1fr);gap:2px;overflow-y:auto;height:180px; }
   .emoji-grid::-webkit-scrollbar { width:3px; }
   .emoji-grid::-webkit-scrollbar-thumb { background:var(--border); }
-  .emoji-btn { background:none;border:none;cursor:pointer;font-size:20px;padding:5px;border-radius:8px;transition:all 0.15s;text-align:center;line-height:1; }
+  .emoji-btn { background:none;border:none;cursor:pointer;font-size:26px;padding:5px;border-radius:8px;transition:all 0.15s;text-align:center;line-height:1; }
   .emoji-btn:hover { background:var(--surface2);transform:scale(1.2); }
   /* SMILIE PANEL */
   .smilie-panel { position:fixed;display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;max-height:260px;overflow-y:auto;z-index:9999;box-shadow:0 -4px 24px rgba(0,0,0,0.8);width:400px; }
@@ -867,6 +867,24 @@ const AVATAR_CATS = {
       {e:'🎆',n:'Feuerwerk'},{e:'🌠',n:'Sternschnuppe'},{e:'🔥',n:'Flamme'},{e:'💯',n:'Perfekt'},{e:'⚡',n:'Power'},
     ]
   },
+  '🏆 Sport': {
+    items: [
+      {e:'⚽',n:'Fußball'},{e:'🏀',n:'Basketball'},{e:'🏈',n:'Football'},{e:'⚾',n:'Baseball'},{e:'🎾',n:'Tennis'},
+      {e:'🏐',n:'Volleyball'},{e:'🏉',n:'Rugby'},{e:'🎱',n:'Billard'},{e:'🏓',n:'Tischtennis'},{e:'🥊',n:'Boxen'},
+      {e:'🏋️',n:'Gewichte'},{e:'🤺',n:'Fechten'},{e:'🏊',n:'Schwimmen'},{e:'🚴',n:'Radfahren'},{e:'🏄',n:'Surfen'},
+      {e:'🧗',n:'Klettern'},{e:'🤸',n:'Turnen'},{e:'⛷️',n:'Ski'},{e:'🏂',n:'Snowboard'},{e:'🎿',n:'Skifahren'},
+      {e:'🏆',n:'Pokal'},{e:'🥇',n:'Gold'},{e:'🥈',n:'Silber'},{e:'🥉',n:'Bronze'},{e:'🎖️',n:'Medaille'},
+    ]
+  },
+  '🎭 Menschen': {
+    items: [
+      {e:'👶',n:'Baby'},{e:'🧒',n:'Kind'},{e:'👦',n:'Junge'},{e:'👧',n:'Mädchen'},{e:'🧑',n:'Person'},
+      {e:'👨',n:'Mann'},{e:'👩',n:'Frau'},{e:'🧓',n:'Ältere'},{e:'👴',n:'Opa'},{e:'👵',n:'Oma'},
+      {e:'👮',n:'Polizei'},{e:'👷',n:'Bauarbeiter'},{e:'💂',n:'Wächter'},{e:'🕵️',n:'Detektiv'},{e:'👨‍⚕️',n:'Arzt'},
+      {e:'👨‍🍳',n:'Koch'},{e:'👨‍🎤',n:'Sänger'},{e:'👨‍🚀',n:'Astronaut'},{e:'🦸',n:'Superheld'},{e:'🦹',n:'Schurke'},
+      {e:'🧙',n:'Zauberer'},{e:'🧛',n:'Vampir'},{e:'🧟',n:'Zombie'},{e:'🧜',n:'Meerjungfrau'},{e:'🧚',n:'Fee'},
+    ]
+  },
 };
 
 // CUSTOM SMILIES
@@ -1011,6 +1029,13 @@ const THEMES = [
   {name:'Rosé',  bg:'linear-gradient(135deg,#f472b6,#e879f9)',av:'#f472b6',tx:'white'},
   {name:'Indigo',bg:'linear-gradient(135deg,#6366f1,#4338ca)',av:'#6366f1',tx:'white'},
   {name:'Smaragd',bg:'linear-gradient(135deg,#10b981,#047857)',av:'#10b981',tx:'white'},
+  {name:'Koralle', bg:'linear-gradient(135deg,#ff6b6b,#ee5a24)',av:'#ff6b6b',tx:'white'},
+  {name:'Himmel',  bg:'linear-gradient(135deg,#74b9ff,#0984e3)',av:'#74b9ff',tx:'white'},
+  {name:'Mint',    bg:'linear-gradient(135deg,#55efc4,#00b894)',av:'#55efc4',tx:'#0a0a0f'},
+  {name:'Braun',   bg:'linear-gradient(135deg,#a0522d,#6b3a2a)',av:'#a0522d',tx:'white'},
+  {name:'Silber',  bg:'linear-gradient(135deg,#b2bec3,#636e72)',av:'#b2bec3',tx:'#0a0a0f'},
+  {name:'Kirsche', bg:'linear-gradient(135deg,#d63031,#c0392b)',av:'#d63031',tx:'white'},
+  {name:'Ozean',   bg:'linear-gradient(135deg,#0652dd,#1289a7)',av:'#0652dd',tx:'white'},
 ];
 
 // EMOJIS
