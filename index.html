@@ -197,6 +197,11 @@
   body.light .header { background:rgba(255,255,255,0.95); }
   body.light .input-area { background:rgba(255,255,255,0.95);position:relative; }
   body.light .msg-bubble { background:#e8e8f0;border-color:#d0d0e0;color:#1a1a2e; }
+  body.light .online-sidebar { background:#ffffff;border-color:#d0d0e0; }
+  body.light .toolbar-btn { background:#e8e8f0;border-color:#d0d0e0;color:#1a1a2e; }
+  body.light .input-box { background:#e8e8f0;border-color:#d0d0e0; }
+  body.light .input-box input { color:#1a1a2e; }
+  body.light .emoji-panel,.body.light .smilie-panel { background:#ffffff;border-color:#d0d0e0; }
 
   /* FONT SIZES */
   body.font-sm .msg-bubble { font-size:13px; }
@@ -1062,6 +1067,7 @@ const EMOJIS = {
 };
 
 let currentUser = null, subscription = null, pendingFile = null;
+let isDark = true;
 const SUPERADMINS = ['pampersbengel_oleg','daddy_dominik']; // Diese Namen können nicht entfernt werden
 const knebelList = {};
 let currentRoom = 'hauptchat'; // Aktueller Raum // { name_lowercase: timestamp_until }
