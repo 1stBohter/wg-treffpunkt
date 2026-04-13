@@ -1607,7 +1607,7 @@ function renderOnlineUsers(users){
   }
   const title=document.querySelector('.online-sidebar-title');
   if(title) title.textContent=`👥 Online (${unique.length}) – Hier: ${inRoom.length}`;
-  console.log('MY ROOM:', currentRoom, 'Users:', unique.map(u=>u.name+'='+u.room));
+  console.log('MY ROOM:', currentRoom, 'Users:', JSON.stringify(unique.map(u=>({n:u.name,r:u.room}))));
 }
 
 // ===== FLÜSTERN =====
