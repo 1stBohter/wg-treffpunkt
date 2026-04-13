@@ -1598,7 +1598,7 @@ function renderOnlineUsers(users){
       const div=document.createElement('div');
       div.className='online-user';
       div.style.opacity='0.5';
-      const roomLabel=u.room==='spielzimmer'?'🎮 Spielzimmer':'🏠 Hauptchat';
+      const roomLabel=u.room==='spielzimmer'?'🎮 Spielzimmer':(u.room==='hauptchat'?'🏠 Hauptchat':'🏠 Hauptchat ('+( u.room||'?')+')' );
       div.innerHTML=`
         <div class="online-user-avatar" style="${avStyle}">${u.avatar||'👤'}</div>
         <div class="online-user-name">${u.name||'Gast'}<br><span style="font-size:10px;color:var(--text-muted);">${roomLabel}</span></div>`;
@@ -1607,6 +1607,7 @@ function renderOnlineUsers(users){
   }
   const title=document.querySelector('.online-sidebar-title');
   if(title) title.textContent=`👥 Online (${unique.length}) – Hier: ${inRoom.length}`;
+  console.log('MY ROOM:', currentRoom, 'Users:', unique.map(u=>u.name+'='+u.room));
 }
 
 // ===== FLÜSTERN =====
