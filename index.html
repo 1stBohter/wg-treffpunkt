@@ -1210,6 +1210,7 @@ async function register(){
 }
 
 async function logout(){
+  if(currentUser) await sendSystemMsg(`👋 ${currentUser.name} verlässt den Chat`);
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
   if(!currentUser.isGuest) await sb.auth.signOut();
   currentUser=null;
@@ -1253,6 +1254,8 @@ function startApp(){
   subscribeVotes();
   subscribePinboard();
   subscribeGagged();
+  // Willkommensnachricht
+  setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
 }
 
 // RÄUME
@@ -1276,13 +1279,40 @@ async function switchRoom(room){
       online_at: new Date().toISOString()
     });
   }
+  // Raumwechsel-Nachricht
+  const raumName = room==='spielzimmer'?'🎮 Spielzimmer':'🏠 Hauptchat';
+  await sendSystemMsg(`🚪 ${currentUser.name} wechselt in den ${raumName}`);
   loadMessages();
+}
+
+// SYSTEM NACHRICHTEN
+async function sendSystemMsg(text){
+  await sb.from('messages').insert({
+    content: text,
+    user_id: 'system',
+    user_name: 'System',
+    is_guest: false,
+    color_index: null,
+    avatar: '🔔',
+    media_url: null,
+    media_type: 'system',
+    room: currentRoom||'hauptchat'
+  });
 }
 
 // MESSAGES
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 function renderMsg(msg){
+  // System-Nachrichten speziell anzeigen
+  if(msg.media_type==='system'){
+    const el=document.createElement('div');
+    el.className='message';
+    el.dataset.msgId=msg.id;
+    el.style.cssText='justify-content:center;padding:4px 0;';
+    el.innerHTML=`<div style="background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.2);border-radius:20px;padding:4px 16px;font-size:12px;color:var(--text-muted);text-align:center;">${msg.content}</div>`;
+    return el;
+  }
   if(msg.media_type==='vote'){
     const placeholder = renderVoteCard(msg, []);
     if(!placeholder) return null;
