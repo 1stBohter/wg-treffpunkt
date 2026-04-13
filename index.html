@@ -1262,15 +1262,17 @@ async function switchRoom(room){
   // Raum-Farbe setzen
   const area = document.getElementById('messagesArea');
   area.className = 'messages-area' + (room !== 'hauptchat' ? ' room-' + room : '');
-  // Presence updaten mit neuem Raum
+  // Presence zuerst untracked dann neu tracken - erzwingt Update bei allen
   if(subscription){
+    await subscription.untrack();
+    await new Promise(res=>setTimeout(res,200));
     await subscription.track({
       name: currentUser.name,
       avatar: currentUser.avatar||'👤',
       color: currentUser.colorIndex,
       isGuest: currentUser.isGuest,
       isAdmin: currentUser.isAdmin||false,
-      room: currentRoom,
+      room: room,
       online_at: new Date().toISOString()
     });
   }
