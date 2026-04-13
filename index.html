@@ -1532,6 +1532,7 @@ function subscribeMessages(){
         color: currentUser.colorIndex,
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
+        room: currentRoom||'hauptchat',
         online_at: new Date().toISOString()
       });
       // Doppelte Namen prüfen
