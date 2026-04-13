@@ -1571,8 +1571,10 @@ function renderOnlineUsers(users){
     count.textContent = unique.length;
     badge.style.display = unique.length > 0 ? 'flex' : 'none';
   }
-  const inRoom = unique.filter(u => (u.room||'hauptchat') === (currentRoom||'hauptchat'));
-  const others = unique.filter(u => (u.room||'hauptchat') !== (currentRoom||'hauptchat'));
+  const myRoom = currentRoom||'hauptchat';
+  const inRoom = unique.filter(u => (u.room||'hauptchat') === myRoom);
+  const others = unique.filter(u => (u.room||'hauptchat') !== myRoom);
+  console.log('FILTER: myRoom='+myRoom+' inRoom='+inRoom.map(u=>u.name)+' others='+others.map(u=>u.name));
   const list=document.getElementById('onlineList');
   list.innerHTML='';
   inRoom.forEach(u=>{
