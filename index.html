@@ -1653,12 +1653,18 @@ async function deleteMsg(msgId){
 const SESSION_START = new Date().toISOString();
 
 async function loadMessages(){
-  // Alte Medien-Nachrichten (Bilder/Videos) aus vorherigen Sessions löschen
+  // Alte Medien-Nachrichten und System-Nachrichten aus vorherigen Sessions löschen
   await sb.from('messages')
     .delete()
     .lt('created_at', SESSION_START)
     .not('media_url','is',null)
     .neq('media_type','image/gif'); // GIFs (Smilies) behalten
+
+  // System-Nachrichten (betritt/verlässt/away) aus vorherigen Sessions löschen
+  await sb.from('messages')
+    .delete()
+    .lt('created_at', SESSION_START)
+    .eq('media_type','system');
 
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
