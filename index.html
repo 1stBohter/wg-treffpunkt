@@ -1487,7 +1487,7 @@ function renderMsg(msg){
     el.className='message';
     el.dataset.msgId=msg.id;
     el.style.cssText='justify-content:center;padding:4px 0;';
-    el.innerHTML=`<div style="background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.2);border-radius:20px;padding:4px 16px;font-size:12px;color:var(--text-muted);text-align:center;">${msg.content}</div>`;
+    el.innerHTML=`<div style="background:rgba(200,255,0,0.15);border:1px solid rgba(200,255,0,0.5);border-radius:20px;padding:5px 18px;font-size:13px;font-weight:700;color:#c8ff00;text-align:center;text-shadow:0 0 8px rgba(200,255,0,0.4);">${msg.content}</div>`;
     return el;
   }
   if(msg.media_type==='vote'){
@@ -1797,9 +1797,10 @@ function renderOnlineUsers(users){
     const isMe = u.name===currentUser.name;
     const div=document.createElement('div');
     div.className='online-user';
+    const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
     div.innerHTML=`
-      <div class="online-user-avatar" style="${avStyle}">${u.avatar||'\u{1F464}'}</div>
-      <div class="online-user-name">${u.name||'Gast'}<br><span style="font-size:10px;color:${u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member'}</span></div>
+      <div class="online-user-avatar" style="${avStyle};${u.away?'opacity:0.6':''}">${u.avatar||'\u{1F464}'}</div>
+      <div class="online-user-name">${u.name||'Gast'}${u.away?' 💤':''}<br><span style="font-size:10px;color:${u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.away?awayLabel.replace(/<[^>]+>/g,''):(u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member')}</span></div>
       ${!isMe?`<button class="whisper-btn" onclick="startWhisper('${(u.name||'Gast').replace(/'/g,"\\'")}','${u.id||''}')" title="\u{1F92B}">\u{1F92B}</button>`:''}`;
     list.appendChild(div);
   });
@@ -1937,17 +1938,19 @@ async function handleCommand(content){
   // /away GRUND - Status setzen
   if(cmd === '/away'){
     const grund = arg || 'Kurz weg';
-    // System-Nachricht an alle
     await sendSystemMsg(`💤 ${currentUser.name} ist gerade nicht da: ${grund}`);
-    // Presence mit Away-Status updaten
     if(subscription){
+      await subscription.untrack();
+      await new Promise(res=>setTimeout(res,200));
       await subscription.track({
-        name: currentUser.name + ' 💤',
+        name: currentUser.name,
         avatar: currentUser.avatar||'👤',
         color: currentUser.colorIndex,
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
         room: currentRoom||'hauptchat',
+        away: true,
+        awayReason: grund,
         online_at: new Date().toISOString()
       });
     }
@@ -1959,6 +1962,8 @@ async function handleCommand(content){
   if(cmd === '/back'){
     await sendSystemMsg(`👋 ${currentUser.name} ist wieder da!`);
     if(subscription){
+      await subscription.untrack();
+      await new Promise(res=>setTimeout(res,200));
       await subscription.track({
         name: currentUser.name,
         avatar: currentUser.avatar||'👤',
@@ -1966,6 +1971,7 @@ async function handleCommand(content){
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
         room: currentRoom||'hauptchat',
+        away: false,
         online_at: new Date().toISOString()
       });
     }
