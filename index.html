@@ -1101,6 +1101,22 @@ const EMOJIS = {
 
 let currentUser = null, subscription = null, pendingFile = null;
 let isDark = true;
+let inactivityTimer = null;
+const INACTIVITY_MINUTES = 20;
+
+function resetInactivityTimer(){
+  if(!currentUser) return;
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(()=>{
+    showChatInfo('⏰ Du wurdest wegen Inaktivität abgemeldet.');
+    setTimeout(()=>logout(), 2000);
+  }, INACTIVITY_MINUTES * 60 * 1000);
+}
+
+function stopInactivityTimer(){
+  clearTimeout(inactivityTimer);
+  inactivityTimer = null;
+}
 const SUPERADMINS = ['pampersbengel_oleg','daddy_dominik']; // Diese Namen können nicht entfernt werden
 const knebelList = {};
 let currentRoom = 'hauptchat'; // Aktueller Raum // { name_lowercase: timestamp_until }
@@ -1243,6 +1259,7 @@ async function register(){
 }
 
 async function logout(){
+  stopInactivityTimer();
   if(currentUser) await sendSystemMsg(`👋 ${currentUser.name} verlässt den Chat`);
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
   if(!currentUser.isGuest) await sb.auth.signOut();
@@ -1412,6 +1429,10 @@ function startApp(){
   subscribeGagged();
   // Willkommensnachricht
   setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
+  // Inaktivitäts-Timer starten
+  resetInactivityTimer();
+  // Bei Aktivität Timer zurücksetzen
+  ['keydown','mousedown','touchstart'].forEach(ev=>document.addEventListener(ev, resetInactivityTimer));
 }
 
 // RÄUME
@@ -1632,6 +1653,13 @@ async function deleteMsg(msgId){
 const SESSION_START = new Date().toISOString();
 
 async function loadMessages(){
+  // Alte Medien-Nachrichten (Bilder/Videos) aus vorherigen Sessions löschen
+  await sb.from('messages')
+    .delete()
+    .lt('created_at', SESSION_START)
+    .not('media_url','is',null)
+    .neq('media_type','image/gif'); // GIFs (Smilies) behalten
+
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
     .neq('media_type','vote')
@@ -1903,6 +1931,45 @@ async function handleCommand(content){
     const {error:e2} = await sb.auth.admin.updateUserById(uid,{user_metadata:{is_admin:false}});
     if(e2) return showChatInfo('❌ Fehler: '+e2.message), true;
     showChatInfo('✅ '+arg+' ist kein Admin mehr.');
+    return true;
+  }
+
+  // /away GRUND - Status setzen
+  if(cmd === '/away'){
+    const grund = arg || 'Kurz weg';
+    // System-Nachricht an alle
+    await sendSystemMsg(`💤 ${currentUser.name} ist gerade nicht da: ${grund}`);
+    // Presence mit Away-Status updaten
+    if(subscription){
+      await subscription.track({
+        name: currentUser.name + ' 💤',
+        avatar: currentUser.avatar||'👤',
+        color: currentUser.colorIndex,
+        isGuest: currentUser.isGuest,
+        isAdmin: currentUser.isAdmin||false,
+        room: currentRoom||'hauptchat',
+        online_at: new Date().toISOString()
+      });
+    }
+    showChatInfo('💤 Away-Status gesetzt: '+grund+' – Schreibe /back um zurückzukommen');
+    return true;
+  }
+
+  // /back - Away aufheben
+  if(cmd === '/back'){
+    await sendSystemMsg(`👋 ${currentUser.name} ist wieder da!`);
+    if(subscription){
+      await subscription.track({
+        name: currentUser.name,
+        avatar: currentUser.avatar||'👤',
+        color: currentUser.colorIndex,
+        isGuest: currentUser.isGuest,
+        isAdmin: currentUser.isAdmin||false,
+        room: currentRoom||'hauptchat',
+        online_at: new Date().toISOString()
+      });
+    }
+    showChatInfo('✅ Du bist wieder da!');
     return true;
   }
 
