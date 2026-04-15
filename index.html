@@ -679,6 +679,39 @@
   </div>
 </div>
 
+<!-- PROFIL BEARBEITEN -->
+<div class="overlay hidden" id="profileOverlay" onclick="closeProfileEdit(event)">
+  <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-logo" style="margin:0">✏️ Profil bearbeiten</div>
+      <button onclick="closeProfileEdit()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div id="profilePreviewAvatar" style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 8px;border:3px solid var(--accent);background:var(--surface2)">👤</div>
+      <div style="font-size:13px;color:var(--text-muted)">Klick auf Avatar oder Farbe zum Ändern</div>
+    </div>
+
+    <!-- AVATAR AUSWAHL -->
+    <div class="input-group">
+      <label>🎭 Avatar wählen</label>
+      <div id="profileAvatarTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;"></div>
+      <div id="profileAvatarGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:160px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- FARBE AUSWAHL -->
+    <div class="input-group" style="margin-top:14px">
+      <label>🎨 Chat-Farbe</label>
+      <div id="profileColorPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
+      <div id="profileColorLabel" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+    </div>
+
+    <div id="profileError" class="error-msg"></div>
+    <button class="btn-primary" onclick="saveProfile()" style="margin-top:16px">💾 Speichern</button>
+    <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:8px">Nur für Members – Gäste können ihr Profil nicht bearbeiten</div>
+  </div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -708,7 +741,7 @@
         <button class="ctrl-btn" onclick="openHilfe()" title="Hilfe">❓</button>
         <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
       </div>
-      <div class="user-chip">
+      <div class="user-chip" onclick="openProfileEdit()" style="cursor:pointer" title="Profil bearbeiten">
         <div class="header-avatar" id="headerAvatar">👤</div>
         <div class="user-chip-info">
           <span class="user-name" id="headerName">Gast</span>
@@ -1222,6 +1255,129 @@ async function logout(){
 
 // APP
 function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
+
+// ===== PROFIL BEARBEITEN =====
+let profileSelectedAvatar = null;
+let profileSelectedColor = null;
+
+function openProfileEdit(){
+  if(!currentUser || currentUser.isGuest){
+    showChatInfo('❌ Nur Members können ihr Profil bearbeiten!');
+    return;
+  }
+  profileSelectedAvatar = {e: currentUser.avatar||'👤'};
+  profileSelectedColor = currentUser.colorIndex??0;
+
+  // Preview setzen
+  document.getElementById('profilePreviewAvatar').textContent = currentUser.avatar||'👤';
+  const t = THEMES[profileSelectedColor];
+  if(t) document.getElementById('profilePreviewAvatar').style.background = t.av;
+
+  // Avatar-Tabs bauen
+  const tabs = document.getElementById('profileAvatarTabs');
+  tabs.innerHTML = '';
+  let first = true;
+  Object.keys(AVATAR_CATS).forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-tab' + (first?' active':'');
+    btn.textContent = cat;
+    btn.onclick = () => {
+      document.querySelectorAll('#profileAvatarTabs .avatar-tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      buildProfileAvatarGrid(cat);
+    };
+    tabs.appendChild(btn);
+    if(first){ buildProfileAvatarGrid(cat); first=false; }
+  });
+
+  // Farb-Picker bauen
+  const row = document.getElementById('profileColorPicker');
+  row.innerHTML = '';
+  THEMES.forEach((t,i) => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (i===profileSelectedColor?' selected':'');
+    sw.style.background = t.bg;
+    sw.title = t.name;
+    sw.onclick = () => {
+      document.querySelectorAll('#profileColorPicker .color-swatch').forEach(s=>s.classList.remove('selected'));
+      sw.classList.add('selected');
+      profileSelectedColor = i;
+      document.getElementById('profileColorLabel').textContent = t.name;
+      document.getElementById('profilePreviewAvatar').style.background = t.av;
+    };
+    row.appendChild(sw);
+  });
+  document.getElementById('profileColorLabel').textContent = THEMES[profileSelectedColor]?.name||'';
+
+  document.getElementById('profileOverlay').classList.remove('hidden');
+}
+
+function buildProfileAvatarGrid(cat){
+  const grid = document.getElementById('profileAvatarGrid');
+  grid.innerHTML = '';
+  AVATAR_CATS[cat].items.forEach(av => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-option' + (av.e===profileSelectedAvatar?.e?' selected':'');
+    btn.textContent = av.e;
+    btn.title = av.n;
+    btn.onclick = () => {
+      profileSelectedAvatar = av;
+      document.querySelectorAll('#profileAvatarGrid .avatar-option').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('profilePreviewAvatar').textContent = av.e;
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function closeProfileEdit(e){
+  if(!e||e.target===document.getElementById('profileOverlay'))
+    document.getElementById('profileOverlay').classList.add('hidden');
+}
+
+async function saveProfile(){
+  if(!currentUser||currentUser.isGuest) return;
+  const newAvatar = profileSelectedAvatar?.e || currentUser.avatar;
+  const newColor = profileSelectedColor??currentUser.colorIndex;
+
+  try{
+    const {error} = await sb.auth.updateUser({
+      data: { avatar: newAvatar, color_index: newColor }
+    });
+    if(error) throw error;
+
+    // Lokal aktualisieren
+    currentUser.avatar = newAvatar;
+    currentUser.colorIndex = newColor;
+
+    // Header aktualisieren
+    const av = document.getElementById('headerAvatar');
+    av.textContent = newAvatar;
+    const t = THEMES[newColor];
+    if(t){ av.style.background=t.av; av.style.color=t.tx; }
+
+    // Presence aktualisieren
+    if(subscription){
+      await subscription.track({
+        name: currentUser.name,
+        avatar: newAvatar,
+        color: newColor,
+        isGuest: false,
+        isAdmin: currentUser.isAdmin||false,
+        room: currentRoom||'hauptchat',
+        online_at: new Date().toISOString()
+      });
+    }
+
+    document.getElementById('profileOverlay').classList.add('hidden');
+    showChatInfo('✅ Profil gespeichert!');
+  } catch(e){
+    const err = document.getElementById('profileError');
+    err.textContent = '❌ Fehler: '+e.message;
+    err.classList.add('show');
+    setTimeout(()=>err.classList.remove('show'),4000);
+  }
+}
 
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
 function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
