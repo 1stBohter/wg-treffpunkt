@@ -1258,8 +1258,34 @@ async function register(){
   startApp();
 }
 
+async function cleanupMyMedia(){
+  try{
+    const {data: myMedia} = await sb.from('messages')
+      .select('media_url')
+      .eq('user_id', currentUser.id)
+      .not('media_url','is',null)
+      .neq('media_type','image/gif');
+    if(myMedia && myMedia.length > 0){
+      const filenames = myMedia
+        .map(m => m.media_url)
+        .filter(url => url && url.includes('chat-media/'))
+        .map(url => url.split('chat-media/')[1].split('?')[0])
+        .filter(f => f);
+      if(filenames.length > 0){
+        await sb.storage.from('chat-media').remove(filenames);
+      }
+      await sb.from('messages')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .not('media_url','is',null)
+        .neq('media_type','image/gif');
+    }
+  } catch(e){ console.log('Media cleanup:', e); }
+}
+
 async function logout(){
   stopInactivityTimer();
+  if(currentUser) await cleanupMyMedia();
   if(currentUser) await sendSystemMsg(`👋 ${currentUser.name} verlässt den Chat`);
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
   if(!currentUser.isGuest) await sb.auth.signOut();
