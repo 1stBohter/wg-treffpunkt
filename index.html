@@ -1653,14 +1653,36 @@ async function deleteMsg(msgId){
 const SESSION_START = new Date().toISOString();
 
 async function loadMessages(){
-  // Alte Medien-Nachrichten und System-Nachrichten aus vorherigen Sessions löschen
+  // Alte Medien-Nachrichten aus Storage UND Datenbank löschen
+  try {
+    const {data: oldMedia} = await sb.from('messages')
+      .select('media_url')
+      .lt('created_at', SESSION_START)
+      .not('media_url','is',null)
+      .neq('media_type','image/gif');
+    
+    if(oldMedia && oldMedia.length > 0){
+      // Dateinamen aus URLs extrahieren und aus Storage löschen
+      const filenames = oldMedia
+        .map(m => m.media_url)
+        .filter(url => url && url.includes('chat-media/'))
+        .map(url => url.split('chat-media/')[1].split('?')[0])
+        .filter(f => f && !f.endsWith('.gif') && !f.endsWith('.png') && !f.match(/^(Bier|Trump|Ninja|Lol|Cool|Budda|Berlin|Bambam)/i));
+      
+      if(filenames.length > 0){
+        await sb.storage.from('chat-media').remove(filenames);
+      }
+    }
+  } catch(e){ console.log('Storage cleanup:', e); }
+
+  // Alte Medien aus Datenbank löschen
   await sb.from('messages')
     .delete()
     .lt('created_at', SESSION_START)
     .not('media_url','is',null)
-    .neq('media_type','image/gif'); // GIFs (Smilies) behalten
+    .neq('media_type','image/gif');
 
-  // System-Nachrichten (betritt/verlässt/away) aus vorherigen Sessions löschen
+  // System-Nachrichten aus vorherigen Sessions löschen
   await sb.from('messages')
     .delete()
     .lt('created_at', SESSION_START)
