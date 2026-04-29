@@ -1301,32 +1301,39 @@ async function register(){
 
 async function cleanupMyMedia(){
   try{
-    // Nach user_name suchen (funktioniert für Gäste und Members)
+    // Alle Nachrichten mit Medien aus der aktuellen Session holen
     const {data: myMedia} = await sb.from('messages')
-      .select('id, media_url')
-      .eq('user_name', currentUser.name)
+      .select('id, media_url, user_id, user_name')
       .not('media_url','is',null)
-      .not('media_type','eq','image/gif');
+      .neq('media_type','image/gif')
+      .or(`user_name.eq.${currentUser.name},user_id.eq.${currentUser.id}`);
 
     if(myMedia && myMedia.length > 0){
-      // Dateinamen aus URLs extrahieren
+      console.log('Gefundene Medien zum Löschen:', myMedia.length);
+      
       const filenames = myMedia
         .map(m => m.media_url)
         .filter(url => url && url.includes('chat-media/'))
-        .map(url => decodeURIComponent(url.split('chat-media/')[1].split('?')[0]))
+        .map(url => {
+          const parts = url.split('chat-media/');
+          return parts[1] ? decodeURIComponent(parts[1].split('?')[0]) : null;
+        })
         .filter(f => f && f.length > 0);
 
-      console.log('Zu löschende Dateien:', filenames);
+      console.log('Dateinamen:', filenames);
 
-      // Aus Storage löschen
       if(filenames.length > 0){
-        const {error: storageError} = await sb.storage.from('chat-media').remove(filenames);
-        if(storageError) console.log('Storage Fehler:', storageError);
+        console.log('Versuche zu löschen:', filenames);
+        const result = await sb.storage.from('chat-media').remove(filenames);
+        console.log('Storage Ergebnis:', JSON.stringify(result));
+        if(result.error) console.log('Storage Fehler Details:', JSON.stringify(result.error));
+        else console.log('Storage erfolgreich geleert!');
       }
 
-      // Aus Datenbank löschen
       const ids = myMedia.map(m => m.id);
       await sb.from('messages').delete().in('id', ids);
+    } else {
+      console.log('Keine Medien zum Löschen gefunden');
     }
   } catch(e){ console.log('Media cleanup Fehler:', e); }
 }
