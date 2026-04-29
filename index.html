@@ -16,6 +16,14 @@
   body { font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column; }
   body::before { content:'';position:fixed;top:-30%;right:-20%;width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%);pointer-events:none;z-index:0; }
   body::after { content:'';position:fixed;bottom:-20%;left:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(200,255,0,0.07) 0%,transparent 70%);pointer-events:none;z-index:0; }
+  /* LINKLEISTE */
+  .link-bar { display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 16px;border-top:1px solid var(--border);background:var(--surface);min-height:34px;flex-shrink:0; }
+  .link-bar a { color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;padding:3px 8px;border-radius:6px;border:1px solid rgba(200,255,0,0.2);transition:all 0.15s;white-space:nowrap; }
+  .link-bar a:hover { background:rgba(200,255,0,0.1);border-color:var(--accent); }
+  .link-bar-edit { margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 8px;border-radius:6px;transition:all 0.15s;font-family:'DM Sans',sans-serif; }
+  .link-bar-edit:hover { border-color:var(--accent);color:var(--accent); }
+  .link-bar-sep { color:var(--border);font-size:12px;user-select:none; }
+
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
   @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -712,6 +720,35 @@
   </div>
 </div>
 
+<!-- LINKS ADMIN MODAL -->
+<div class="overlay hidden" id="linksOverlay" onclick="closeLinksAdmin(event)">
+  <div class="modal" style="max-width:500px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-logo" style="margin:0">🔗 Links verwalten</div>
+      <button onclick="closeLinksAdmin()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <!-- Neuen Link hinzufügen -->
+    <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Neuen Link hinzufügen</div>
+      <div class="input-group" style="margin-bottom:8px">
+        <label>Name/Titel</label>
+        <input type="text" id="linkTitle" placeholder="z.B. Amazon" maxlength="30">
+      </div>
+      <div class="input-group" style="margin-bottom:10px">
+        <label>URL</label>
+        <input type="url" id="linkUrl" placeholder="https://...">
+      </div>
+      <button class="btn-primary" onclick="addLink()" style="width:100%">➕ Link hinzufügen</button>
+    </div>
+
+    <!-- Aktuelle Links -->
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Aktuelle Links</div>
+    <div id="linksList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;"></div>
+    <div id="linksError" class="error-msg"></div>
+  </div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -823,6 +860,10 @@
         <div class="char-count" id="charCount">0 / 2000</div>
 
       </div>
+    <!-- LINKLEISTE -->
+    <div class="link-bar" id="linkBar">
+      <span style="font-size:11px;color:var(--text-muted)">🔗 Links werden geladen...</span>
+    </div>
     </div><!-- end chat-main -->
 
     <div class="online-sidebar">
@@ -1422,6 +1463,111 @@ async function saveProfile(){
   }
 }
 
+// ===== LINKLEISTE =====
+async function loadLinks(){
+  const bar = document.getElementById('linkBar');
+  try {
+    const {data, error} = await sb.from('chat_links').select('*').order('position',{ascending:true});
+    if(error) throw error;
+    
+    bar.innerHTML = '';
+    
+    if(!data || data.length === 0){
+      bar.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">Noch keine Links vorhanden</span>';
+    } else {
+      data.forEach((link, i) => {
+        if(i > 0){
+          const sep = document.createElement('span');
+          sep.className = 'link-bar-sep';
+          sep.textContent = '|';
+          bar.appendChild(sep);
+        }
+        const a = document.createElement('a');
+        a.href = link.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = link.title;
+        bar.appendChild(a);
+      });
+    }
+
+    // Admin-Button nur für Admins
+    if(currentUser && currentUser.isAdmin){
+      const btn = document.createElement('button');
+      btn.className = 'link-bar-edit';
+      btn.textContent = '✏️ Links';
+      btn.onclick = openLinksAdmin;
+      bar.appendChild(btn);
+    }
+  } catch(e){
+    bar.innerHTML = '';
+    console.log('Links laden fehlgeschlagen:', e);
+  }
+}
+
+async function openLinksAdmin(){
+  await renderLinksList();
+  document.getElementById('linksOverlay').classList.remove('hidden');
+}
+
+function closeLinksAdmin(e){
+  if(!e || e.target===document.getElementById('linksOverlay'))
+    document.getElementById('linksOverlay').classList.add('hidden');
+}
+
+async function renderLinksList(){
+  const {data} = await sb.from('chat_links').select('*').order('position',{ascending:true});
+  const list = document.getElementById('linksList');
+  list.innerHTML = '';
+  if(!data || data.length === 0){
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px">Noch keine Links vorhanden</div>';
+    return;
+  }
+  data.forEach(link => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:8px 12px;';
+    row.innerHTML = `
+      <span style="font-size:13px;font-weight:600;flex:1;color:var(--text)">${link.title}</span>
+      <span style="font-size:11px;color:var(--text-muted);flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${link.url}</span>
+      <button onclick="deleteLink('${link.id}')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px">🗑️</button>`;
+    list.appendChild(row);
+  });
+}
+
+async function addLink(){
+  const title = document.getElementById('linkTitle').value.trim();
+  const url = document.getElementById('linkUrl').value.trim();
+  if(!title || !url){ 
+    showLinksError('Bitte Name und URL eingeben!'); 
+    return; 
+  }
+  if(!url.startsWith('http')){ 
+    showLinksError('URL muss mit http:// oder https:// beginnen!'); 
+    return; 
+  }
+  const {data: existing} = await sb.from('chat_links').select('position').order('position',{ascending:false}).limit(1);
+  const pos = existing && existing.length > 0 ? existing[0].position + 1 : 0;
+  const {error} = await sb.from('chat_links').insert({title, url, position: pos});
+  if(error){ showLinksError('Fehler: '+error.message); return; }
+  document.getElementById('linkTitle').value = '';
+  document.getElementById('linkUrl').value = '';
+  await renderLinksList();
+  await loadLinks();
+}
+
+async function deleteLink(id){
+  await sb.from('chat_links').delete().eq('id', id);
+  await renderLinksList();
+  await loadLinks();
+}
+
+function showLinksError(msg){
+  const el = document.getElementById('linksError');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
 function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
 
@@ -1453,6 +1599,8 @@ function startApp(){
   subscribeVotes();
   subscribePinboard();
   subscribeGagged();
+  // Links laden
+  loadLinks();
   // Willkommensnachricht
   setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
   // Inaktivitäts-Timer starten
