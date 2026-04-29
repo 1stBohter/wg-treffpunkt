@@ -1301,27 +1301,34 @@ async function register(){
 
 async function cleanupMyMedia(){
   try{
+    // Nach user_name suchen (funktioniert für Gäste und Members)
     const {data: myMedia} = await sb.from('messages')
-      .select('media_url')
-      .eq('user_id', currentUser.id)
+      .select('id, media_url')
+      .eq('user_name', currentUser.name)
       .not('media_url','is',null)
-      .neq('media_type','image/gif');
+      .not('media_type','eq','image/gif');
+
     if(myMedia && myMedia.length > 0){
+      // Dateinamen aus URLs extrahieren
       const filenames = myMedia
         .map(m => m.media_url)
         .filter(url => url && url.includes('chat-media/'))
-        .map(url => url.split('chat-media/')[1].split('?')[0])
-        .filter(f => f);
+        .map(url => decodeURIComponent(url.split('chat-media/')[1].split('?')[0]))
+        .filter(f => f && f.length > 0);
+
+      console.log('Zu löschende Dateien:', filenames);
+
+      // Aus Storage löschen
       if(filenames.length > 0){
-        await sb.storage.from('chat-media').remove(filenames);
+        const {error: storageError} = await sb.storage.from('chat-media').remove(filenames);
+        if(storageError) console.log('Storage Fehler:', storageError);
       }
-      await sb.from('messages')
-        .delete()
-        .eq('user_id', currentUser.id)
-        .not('media_url','is',null)
-        .neq('media_type','image/gif');
+
+      // Aus Datenbank löschen
+      const ids = myMedia.map(m => m.id);
+      await sb.from('messages').delete().in('id', ids);
     }
-  } catch(e){ console.log('Media cleanup:', e); }
+  } catch(e){ console.log('Media cleanup Fehler:', e); }
 }
 
 async function logout(){
