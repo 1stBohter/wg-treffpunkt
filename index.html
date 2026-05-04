@@ -24,6 +24,9 @@
   .link-bar-edit:hover { border-color:var(--accent);color:var(--accent); }
   .link-bar-sep { color:var(--border);font-size:12px;user-select:none; }
 
+  .admin-quick-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;text-align:left;font-family:'DM Sans',sans-serif; }
+  .admin-quick-btn:hover { border-color:var(--accent);color:var(--accent);background:rgba(200,255,0,0.05); }
+
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
   @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -720,6 +723,49 @@
   </div>
 </div>
 
+<!-- ADMIN MENÜ MODAL -->
+<div class="overlay hidden" id="adminMenuOverlay" onclick="closeAdminMenu(event)">
+  <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-logo" style="margin:0">👑 Admin-Menü</div>
+      <button onclick="closeAdminMenu()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <!-- Schnellbefehle -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Schnellbefehle</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <button class="admin-quick-btn" onclick="adminQuick('/knebel ')">🔇 Knebeln</button>
+      <button class="admin-quick-btn" onclick="adminQuick('/unknebel ')">🔊 Unknebeln</button>
+      <button class="admin-quick-btn" onclick="adminQuick('/makeadmin ')">👑 Admin machen</button>
+      <button class="admin-quick-btn" onclick="adminQuick('/makeunadmin ')">❌ Admin entziehen</button>
+      <button class="admin-quick-btn" onclick="adminQuick('/away ')">💤 Away setzen</button>
+      <button class="admin-quick-btn" onclick="adminQuick('/back')">✅ Zurück</button>
+    </div>
+
+    <!-- Nur Superadmin -->
+    <div id="superAdminSection" style="display:none">
+      <div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">⚡ Superadmin</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <button class="admin-quick-btn" style="border-color:rgba(239,68,68,0.4);color:#ef4444" onclick="adminCls()">🧹 /cls – Alle Nachrichten löschen</button>
+        <button class="admin-quick-btn" onclick="adminQuick('/pm ')">📩 /pm – Nachricht hinterlassen</button>
+      </div>
+    </div>
+
+    <!-- Befehlsübersicht -->
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Alle Befehle</div>
+    <div style="background:var(--surface2);border-radius:12px;padding:12px;font-size:12px;line-height:2;color:var(--text-muted)">
+      <span style="color:var(--accent);font-family:monospace">/knebel Name [1-5]</span> – User stumm schalten<br>
+      <span style="color:var(--accent);font-family:monospace">/unknebel Name</span> – User freischalten<br>
+      <span style="color:var(--accent);font-family:monospace">/makeadmin Name</span> – Admin machen<br>
+      <span style="color:var(--accent);font-family:monospace">/makeunadmin Name</span> – Admin entziehen<br>
+      <span style="color:var(--accent);font-family:monospace">/away Grund</span> – Status setzen<br>
+      <span style="color:var(--accent);font-family:monospace">/back</span> – Zurück<br>
+      <span style="color:var(--accent);font-family:monospace">/pm Name Text</span> – Nachricht hinterlassen<br>
+      <span style="color:#ef4444;font-family:monospace">/cls</span> – Alle Nachrichten löschen <span style="color:#ef4444">(Superadmin)</span>
+    </div>
+  </div>
+</div>
+
 <!-- LINKS ADMIN MODAL -->
 <div class="overlay hidden" id="linksOverlay" onclick="closeLinksAdmin(event)">
   <div class="modal" style="max-width:500px" onclick="event.stopPropagation()">
@@ -776,6 +822,7 @@
         <button class="ctrl-btn" onclick="toggleTheme()" id="themeBtn" title="Hell/Dunkel">🌙</button>
         <button class="ctrl-btn" onclick="openPinboard()" title="Pinnwand">📌</button>
         <button class="ctrl-btn" onclick="openHilfe()" title="Hilfe">❓</button>
+        <button class="ctrl-btn" id="adminMenuBtn" onclick="openAdminMenu()" title="Admin-Menü" style="display:none">👑</button>
         <button class="ctrl-btn" onclick="cycleFontSize()" id="fontBtn" title="Schriftgröße">A</button>
       </div>
       <div class="user-chip" onclick="openProfileEdit()" style="cursor:pointer" title="Profil bearbeiten">
@@ -1582,6 +1629,32 @@ function showLinksError(msg){
   setTimeout(()=>el.classList.remove('show'), 3000);
 }
 
+// ===== ADMIN MENÜ =====
+function openAdminMenu(){
+  const superSection = document.getElementById('superAdminSection');
+  if(superSection){
+    superSection.style.display = SUPERADMINS.includes(currentUser.name.toLowerCase()) ? 'block' : 'none';
+  }
+  document.getElementById('adminMenuOverlay').classList.remove('hidden');
+}
+function closeAdminMenu(e){
+  if(!e||e.target===document.getElementById('adminMenuOverlay'))
+    document.getElementById('adminMenuOverlay').classList.add('hidden');
+}
+function adminQuick(cmd){
+  document.getElementById('adminMenuOverlay').classList.add('hidden');
+  const inp = document.getElementById('msgInput');
+  inp.value = cmd;
+  inp.focus();
+}
+async function adminCls(){
+  document.getElementById('adminMenuOverlay').classList.add('hidden');
+  if(!confirm('ALLE Nachrichten löschen? Nicht rückgängig machbar!')) return;
+  await sb.from('messages').delete().eq('room', currentRoom||'hauptchat').neq('media_type','vote');
+  document.getElementById('messagesArea').innerHTML = '';
+  showChatInfo('🧹 Alle Nachrichten gelöscht!');
+}
+
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
 function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
 
@@ -1615,6 +1688,10 @@ function startApp(){
   subscribeGagged();
   // Links laden
   loadLinks();
+  // Admin-Button anzeigen
+  if(currentUser.isAdmin){
+    document.getElementById('adminMenuBtn').style.display = 'flex';
+  }
   // Willkommensnachricht
   setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
   // Inaktivitäts-Timer starten
@@ -1756,7 +1833,7 @@ function renderMsg(msg){
       <div class="msg-wrap">
         <div class="msg-actions">
           <button class="action-btn action-react" onclick="showReactPicker(event,${msg.id})">😊</button>
-          ${isOwn?`<button class="action-btn" onclick="deleteMsg(${msg.id})">🗑️</button>`:''}
+          ${(isOwn||(currentUser&&currentUser.isAdmin))?`<button class="action-btn" onclick="deleteMsg(${msg.id})">🗑️</button>`:''}
         </div>
         <div class="msg-bubble" ${bubbleStyle}>${bubbleContent}</div>
       </div>
@@ -1834,6 +1911,7 @@ async function toggleReaction(msgId,emoji){
 async function deleteMsg(msgId){
   if(!confirm('Nachricht löschen?')) return;
   await sb.from('messages').delete().eq('id',msgId);
+  // Lokal sofort entfernen
   document.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
 }
 
@@ -2192,6 +2270,18 @@ async function handleCommand(content){
       });
     }
     showChatInfo('✅ Du bist wieder da!');
+    return true;
+  }
+
+  // /cls - alle Nachrichten löschen (nur Superadmin)
+  if(cmd === '/cls'){
+    if(!SUPERADMINS.includes(currentUser.name.toLowerCase())){
+      showChatInfo('❌ Nur Superadmins können /cls nutzen!'); return true;
+    }
+    if(!confirm('ALLE Nachrichten im Chat löschen? Das kann nicht rückgängig gemacht werden!')) return true;
+    await sb.from('messages').delete().eq('room', currentRoom||'hauptchat').neq('media_type','vote');
+    document.getElementById('messagesArea').innerHTML = '';
+    showChatInfo('🧹 Alle Nachrichten wurden gelöscht!');
     return true;
   }
 
