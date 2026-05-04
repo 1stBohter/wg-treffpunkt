@@ -1650,9 +1650,9 @@ function adminQuick(cmd){
 async function adminCls(){
   document.getElementById('adminMenuOverlay').classList.add('hidden');
   if(!confirm('ALLE Nachrichten löschen? Nicht rückgängig machbar!')) return;
-  await sb.from('messages').delete().eq('room', currentRoom||'hauptchat').neq('media_type','vote');
-  document.getElementById('messagesArea').innerHTML = '';
-  showChatInfo('🧹 Alle Nachrichten gelöscht!');
+  const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
 }
 
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
@@ -2279,9 +2279,11 @@ async function handleCommand(content){
       showChatInfo('❌ Nur Superadmins können /cls nutzen!'); return true;
     }
     if(!confirm('ALLE Nachrichten im Chat löschen? Das kann nicht rückgängig gemacht werden!')) return true;
-    await sb.from('messages').delete().eq('room', currentRoom||'hauptchat').neq('media_type','vote');
-    document.getElementById('messagesArea').innerHTML = '';
-    showChatInfo('🧹 Alle Nachrichten wurden gelöscht!');
+    // ALLE Nachrichten im Raum löschen - kein user_id Filter!
+    const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
+    if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
+    // System-Nachricht damit alle es sehen
+    await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
     return true;
   }
 
