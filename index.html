@@ -1692,6 +1692,21 @@ function startApp(){
   if(currentUser.isAdmin){
     document.getElementById('adminMenuBtn').style.display = 'flex';
   }
+  // PM-Nachrichten prüfen
+  setTimeout(async()=>{
+    const {data: pms} = await sb.from('messages')
+      .select('*')
+      .eq('media_type','pm')
+      .eq('pm_target', currentUser.name.toLowerCase());
+    if(pms && pms.length > 0){
+      pms.forEach(pm => {
+        showChatInfo(`📩 Du hast eine Nachricht: ${pm.content.replace(/<[^>]+>/g,'')} (von ${pm.user_name})`);
+      });
+      // PMs nach Anzeige löschen
+      const ids = pms.map(p=>p.id);
+      await sb.from('messages').delete().in('id', ids);
+    }
+  }, 2000);
   // Willkommensnachricht
   setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
   // Inaktivitäts-Timer starten
@@ -1746,6 +1761,15 @@ async function sendSystemMsg(text){
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
 function renderMsg(msg){
+  // PM-Nachrichten anzeigen
+  if(msg.media_type==='pm'){
+    const el=document.createElement('div');
+    el.className='message';
+    el.dataset.msgId=msg.id;
+    el.style.cssText='justify-content:center;padding:4px 0;';
+    el.innerHTML=`<div style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.4);border-radius:20px;padding:5px 18px;font-size:13px;font-weight:700;color:#a78bfa;text-align:center;">📩 ${msg.content}</div>`;
+    return el;
+  }
   // System-Nachrichten speziell anzeigen
   if(msg.media_type==='system'){
     const el=document.createElement('div');
@@ -2270,6 +2294,32 @@ async function handleCommand(content){
       });
     }
     showChatInfo('✅ Du bist wieder da!');
+    return true;
+  }
+
+  // /pm NAME TEXT - Nachricht für abwesende User hinterlassen
+  if(cmd === '/pm'){
+    const parts = arg.split(' ');
+    const targetName = parts[0];
+    const pmText = parts.slice(1).join(' ');
+    if(!targetName || !pmText){
+      showChatInfo('❌ Bitte so eingeben: /pm Name Nachricht');
+      return true;
+    }
+    // PM als spezielle Nachricht speichern
+    await sb.from('messages').insert({
+      content: `📩 PM für <strong>${targetName}</strong>: ${pmText}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      is_guest: currentUser.isGuest,
+      color_index: currentUser.colorIndex??null,
+      avatar: currentUser.avatar||'👤',
+      media_url: null,
+      media_type: 'pm',
+      room: 'hauptchat',
+      pm_target: targetName.toLowerCase()
+    });
+    showChatInfo(`📩 PM an ${targetName} hinterlassen!`);
     return true;
   }
 
