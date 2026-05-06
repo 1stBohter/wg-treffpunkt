@@ -1685,7 +1685,7 @@ function startApp(){
   document.getElementById('headerName').textContent=currentUser.name;
   const wm=document.getElementById('userWatermark');wm.textContent=currentUser.name;wm.style.display='inline';
   const roleEl=document.getElementById('headerRole');
-  if(roleEl) roleEl.textContent=currentUser.isAdmin?'👑 Admin':currentUser.isGuest?'👤 Gast':'⭐ Member';
+  if(roleEl) roleEl.textContent=SUPERADMINS.includes(currentUser.name.toLowerCase())?'⚡ Superadmin':currentUser.isAdmin?'👑 Admin':currentUser.isGuest?'👤 Gast':'⭐ Member';
   const msgInput=document.getElementById('msgInput');
   if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
   loadMessages();
@@ -2130,7 +2130,7 @@ function renderOnlineUsers(users){
     const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
     div.innerHTML=`
       <div class="online-user-avatar" style="${avStyle};${u.away?'opacity:0.6':''}">${u.avatar||'\u{1F464}'}</div>
-      <div class="online-user-name">${u.name||'Gast'}${u.away?' 💤':''}<br><span style="font-size:10px;color:${u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.away?awayLabel.replace(/<[^>]+>/g,''):(u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member')}</span></div>
+      <div class="online-user-name">${u.name||'Gast'}${u.away?' 💤':''}<br><span style="font-size:10px;color:${SUPERADMINS.includes((u.name||'').toLowerCase())?'#ff6b35':u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.away?awayLabel.replace(/<[^>]+>/g,''):(SUPERADMINS.includes((u.name||'').toLowerCase())?'⚡ Superadmin':u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member')}</span></div>
       ${!isMe?`<button class="whisper-btn" onclick="startWhisper('${(u.name||'Gast').replace(/'/g,"\\'")}','${u.id||''}')" title="\u{1F92B}">\u{1F92B}</button>`:''}`;
     list.appendChild(div);
   });
