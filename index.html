@@ -1946,9 +1946,22 @@ async function toggleReaction(msgId,emoji){
 
 async function deleteMsg(msgId){
   if(!confirm('Nachricht löschen?')) return;
+  // Zuerst Nachricht aus DB holen um media_url zu bekommen
+  const {data:msg} = await sb.from('messages').select('media_url,media_type').eq('id',msgId).single();
+  // Aus DB löschen
   await sb.from('messages').delete().eq('id',msgId);
   // Lokal sofort entfernen
   document.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
+  // Wenn Bild/Video dabei war auch aus Storage löschen
+  if(msg && msg.media_url && msg.media_type !== 'image/gif'){
+    try{
+      const url = msg.media_url;
+      if(url.includes('chat-media/')){
+        const filename = decodeURIComponent(url.split('chat-media/')[1].split('?')[0]);
+        if(filename) await sb.storage.from('chat-media').remove([filename]);
+      }
+    } catch(e){ console.log('Storage delete:', e); }
+  }
 }
 
 // Session-Startzeit – nur Nachrichten ab jetzt laden
@@ -2327,10 +2340,25 @@ async function handleCommand(content){
       showChatInfo('❌ Nur Superadmins können /cls nutzen!'); return true;
     }
     if(!confirm('ALLE Nachrichten im Chat löschen? Das kann nicht rückgängig gemacht werden!')) return true;
-    // ALLE Nachrichten im Raum löschen - kein user_id Filter!
+    // Zuerst alle Medien-URLs holen und aus Storage löschen
+    try{
+      const {data:mediamsgs} = await sb.from('messages')
+        .select('media_url,media_type')
+        .eq('room', currentRoom||'hauptchat')
+        .not('media_url','is',null)
+        .neq('media_type','image/gif');
+      if(mediamsgs && mediamsgs.length > 0){
+        const filenames = mediamsgs
+          .map(m=>m.media_url)
+          .filter(url=>url&&url.includes('chat-media/'))
+          .map(url=>decodeURIComponent(url.split('chat-media/')[1].split('?')[0]))
+          .filter(f=>f);
+        if(filenames.length > 0) await sb.storage.from('chat-media').remove(filenames);
+      }
+    }catch(e){ console.log('Storage cls:', e); }
+    // ALLE Nachrichten im Raum löschen
     const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
     if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
-    // System-Nachricht damit alle es sehen
     await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
     return true;
   }
