@@ -1668,11 +1668,10 @@ async function saveChat(){
     const heute = new Date();
     const datum = heute.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
     const zeit = heute.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
-    const startOfDay = new Date(heute);
-    startOfDay.setHours(0,0,0,0);
+    // Nur ab dem eigenen Login-Zeitpunkt speichern
     const {data:msgs, error} = await sb.from('messages')
       .select('*').eq('room', currentRoom||'hauptchat')
-      .gte('created_at', startOfDay.toISOString())
+      .gte('created_at', SESSION_START)
       .order('created_at', {ascending:true});
     if(error || !msgs || msgs.length === 0){
       showChatInfo('❌ Keine Nachrichten zum Speichern gefunden!'); return;
