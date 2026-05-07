@@ -868,6 +868,7 @@
           <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
           <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
           <button class="toolbar-btn" onclick="openVoteModal()">🗳️ <span>Abstimmung</span></button>
+          <button class="toolbar-btn" onclick="saveChat()">💾 <span>Chat speichern</span></button>
           <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
         </div>
 
@@ -1660,6 +1661,74 @@ async function adminCls(){
 async function closePmPopup(pmId, btn){
   btn.parentElement.remove();
   await sb.from('private_messages').update({read:true}).eq('id',pmId);
+}
+
+async function saveChat(){
+  try {
+    const heute = new Date();
+    const datum = heute.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const zeit = heute.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+
+    // Nachrichten von heute laden
+    const startOfDay = new Date(heute);
+    startOfDay.setHours(0,0,0,0);
+
+    const {data:msgs, error} = await sb.from('messages')
+      .select('*')
+      .eq('room', currentRoom||'hauptchat')
+      .gte('created_at', startOfDay.toISOString())
+      .order('created_at', {ascending:true});
+
+    if(error || !msgs || msgs.length === 0){
+      showChatInfo('❌ Keine Nachrichten zum Speichern gefunden!');
+      return;
+    }
+
+    // Als schöne Text-Datei aufbauen
+    let text = `WG-Treffpunkt – Chat vom ${datum}
+`;
+    text += `Raum: ${currentRoom==='spielzimmer'?'🎮 Spielzimmer':'🏠 Hauptchat'}
+`;
+    text += `Gespeichert von: ${currentUser.name} um ${zeit} Uhr
+`;
+    text += '='.repeat(50) + '
+
+';
+
+    msgs.forEach(msg => {
+      const t = new Date(msg.created_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      if(msg.media_type === 'system'){
+        text += `--- ${msg.content} ---
+`;
+      } else if(msg.media_url){
+        text += `[${t}] ${msg.user_name}: [Bild/Video]
+`;
+      } else if(msg.content){
+        // HTML Tags entfernen
+        const sauber = msg.content.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+        text += `[${t}] ${msg.user_name}: ${sauber}
+`;
+      }
+    });
+
+    text += '
+' + '='.repeat(50) + '
+';
+    text += `Ende des Chatlogs – ${msgs.length} Nachrichten
+`;
+
+    // Als Datei herunterladen
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `WG-Treffpunkt_${datum.replace(/\./g,'-')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showChatInfo('💾 Chat gespeichert!');
+  } catch(e){
+    showChatInfo('❌ Fehler beim Speichern: '+e.message);
+  }
 }
 
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
