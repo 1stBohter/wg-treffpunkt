@@ -868,7 +868,6 @@
           <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()">📎 <span>Datei</span></button>
           <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
           <button class="toolbar-btn" onclick="openVoteModal()">🗳️ <span>Abstimmung</span></button>
-          <button class="toolbar-btn" onclick="saveChat()">💾 <span>Chat speichern</span></button>
           <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
         </div>
 
@@ -1663,74 +1662,6 @@ async function closePmPopup(pmId, btn){
   await sb.from('private_messages').update({read:true}).eq('id',pmId);
 }
 
-async function saveChat(){
-  try {
-    const heute = new Date();
-    const datum = heute.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
-    const zeit = heute.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
-
-    // Nachrichten von heute laden
-    const startOfDay = new Date(heute);
-    startOfDay.setHours(0,0,0,0);
-
-    const {data:msgs, error} = await sb.from('messages')
-      .select('*')
-      .eq('room', currentRoom||'hauptchat')
-      .gte('created_at', startOfDay.toISOString())
-      .order('created_at', {ascending:true});
-
-    if(error || !msgs || msgs.length === 0){
-      showChatInfo('❌ Keine Nachrichten zum Speichern gefunden!');
-      return;
-    }
-
-    // Als schöne Text-Datei aufbauen
-    let text = `WG-Treffpunkt – Chat vom ${datum}
-`;
-    text += `Raum: ${currentRoom==='spielzimmer'?'🎮 Spielzimmer':'🏠 Hauptchat'}
-`;
-    text += `Gespeichert von: ${currentUser.name} um ${zeit} Uhr
-`;
-    text += '='.repeat(50) + '
-
-';
-
-    msgs.forEach(msg => {
-      const t = new Date(msg.created_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-      if(msg.media_type === 'system'){
-        text += `--- ${msg.content} ---
-`;
-      } else if(msg.media_url){
-        text += `[${t}] ${msg.user_name}: [Bild/Video]
-`;
-      } else if(msg.content){
-        // HTML Tags entfernen
-        const sauber = msg.content.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-        text += `[${t}] ${msg.user_name}: ${sauber}
-`;
-      }
-    });
-
-    text += '
-' + '='.repeat(50) + '
-';
-    text += `Ende des Chatlogs – ${msgs.length} Nachrichten
-`;
-
-    // Als Datei herunterladen
-    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `WG-Treffpunkt_${datum.replace(/\./g,'-')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showChatInfo('💾 Chat gespeichert!');
-  } catch(e){
-    showChatInfo('❌ Fehler beim Speichern: '+e.message);
-  }
-}
-
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
 function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
 
@@ -2015,22 +1946,9 @@ async function toggleReaction(msgId,emoji){
 
 async function deleteMsg(msgId){
   if(!confirm('Nachricht löschen?')) return;
-  // Zuerst Nachricht aus DB holen um media_url zu bekommen
-  const {data:msg} = await sb.from('messages').select('media_url,media_type').eq('id',msgId).single();
-  // Aus DB löschen
   await sb.from('messages').delete().eq('id',msgId);
   // Lokal sofort entfernen
   document.querySelector(`[data-msg-id="${msgId}"]`)?.remove();
-  // Wenn Bild/Video dabei war auch aus Storage löschen
-  if(msg && msg.media_url && msg.media_type !== 'image/gif'){
-    try{
-      const url = msg.media_url;
-      if(url.includes('chat-media/')){
-        const filename = decodeURIComponent(url.split('chat-media/')[1].split('?')[0]);
-        if(filename) await sb.storage.from('chat-media').remove([filename]);
-      }
-    } catch(e){ console.log('Storage delete:', e); }
-  }
 }
 
 // Session-Startzeit – nur Nachrichten ab jetzt laden
@@ -2409,25 +2327,10 @@ async function handleCommand(content){
       showChatInfo('❌ Nur Superadmins können /cls nutzen!'); return true;
     }
     if(!confirm('ALLE Nachrichten im Chat löschen? Das kann nicht rückgängig gemacht werden!')) return true;
-    // Zuerst alle Medien-URLs holen und aus Storage löschen
-    try{
-      const {data:mediamsgs} = await sb.from('messages')
-        .select('media_url,media_type')
-        .eq('room', currentRoom||'hauptchat')
-        .not('media_url','is',null)
-        .neq('media_type','image/gif');
-      if(mediamsgs && mediamsgs.length > 0){
-        const filenames = mediamsgs
-          .map(m=>m.media_url)
-          .filter(url=>url&&url.includes('chat-media/'))
-          .map(url=>decodeURIComponent(url.split('chat-media/')[1].split('?')[0]))
-          .filter(f=>f);
-        if(filenames.length > 0) await sb.storage.from('chat-media').remove(filenames);
-      }
-    }catch(e){ console.log('Storage cls:', e); }
-    // ALLE Nachrichten im Raum löschen
+    // ALLE Nachrichten im Raum löschen - kein user_id Filter!
     const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
     if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
+    // System-Nachricht damit alle es sehen
     await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
     return true;
   }
