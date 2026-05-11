@@ -1828,20 +1828,29 @@ async function sspWahl(event, emoji, name){
   event.target.classList.add('selected');
   document.getElementById('sspWarten').style.display = 'block';
 
-  // Wahl über System-Nachricht senden (versteckt als SSP-Event)
-  await sb.from('messages').insert({
-    content: `🎮 SSP:${sspGameId}:${currentUser.name}:${name}`,
-    user_id: currentUser.id,
-    user_name: currentUser.name,
-    is_guest: currentUser.isGuest,
-    color_index: null,
-    avatar: currentUser.avatar||'👤',
-    media_url: null,
-    media_type: 'ssp_move',
-    room: currentRoom||'hauptchat'
-  });
+  // Broadcast an alle - Gegner wird benachrichtigt
+  await subscription.send({type:'broadcast',event:'ssp_challenge',payload:{
+    gameId: sspGameId,
+    herausforderer: currentUser.name,
+    gegner: gegner,
+    wahl: name
+  }});
 
-  showChatInfo(`✂️ Du hast ${emoji} ${name} gewählt! Warte auf ${gegner}...`);
+  showChatInfo(`✂️ Du hast ${emoji} ${name} gewählt! ${gegner} wird benachrichtigt...`);
+}
+
+async function sspAntwort(gameId, herausforderer, emoji, name, el){
+  // Popup schließen
+  document.getElementById('sspChallengePopup')?.remove();
+  showChatInfo(`✂️ Du hast ${emoji} ${name} gewählt!`);
+  // Wahl broadcasten
+  await subscription.send({type:'broadcast',event:'ssp_answer',payload:{
+    gameId: gameId,
+    spieler: currentUser.name,
+    wahl: name,
+    emoji: emoji,
+    herausforderer: herausforderer
+  }});
 }
 
 function sspNochmal(){
@@ -2307,6 +2316,59 @@ function subscribeMessages(){
   channel.on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},(payload)=>{
     document.querySelector(`[data-msg-id="${payload.old.id}"]`)?.remove();
   });
+  // SSP Antwort empfangen - Ergebnis berechnen für Herausforderer
+  channel.on('broadcast',{event:'ssp_answer'},(payload)=>{
+    const p = payload.payload;
+    if(p.herausforderer !== currentUser.name) return;
+    // Ich bin der Herausforderer - ich kenne meine eigene Wahl
+    if(!sspMeineWahl) return;
+    const meineWahl = sspMeineWahl.name;
+    const gegnerWahl = p.wahl;
+    const emojis = {Schere:'✂️', Stein:'🪨', Papier:'📄'};
+    const ergebnis = sspBerechne(meineWahl, gegnerWahl);
+    let resultText = '';
+    if(ergebnis==='win') resultText = `🏆 Du gewinnst! ${emojis[meineWahl]} schlägt ${emojis[gegnerWahl]}`;
+    else if(ergebnis==='lose') resultText = `😅 ${p.spieler} gewinnt! ${emojis[gegnerWahl]} schlägt ${emojis[meineWahl]}`;
+    else resultText = `🤝 Unentschieden! Beide: ${emojis[meineWahl]}`;
+    // Im Chat posten
+    sendSystemMsg(`✂️ ${currentUser.name} (${emojis[meineWahl]}) vs ${p.spieler} (${emojis[gegnerWahl]}) → ${ergebnis==='win'?'🏆 '+currentUser.name+' gewinnt!':ergebnis==='lose'?'🏆 '+p.spieler+' gewinnt!':'🤝 Unentschieden!'}`);
+    // Ergebnis im Modal zeigen
+    const resultEl = document.getElementById('sspResultText');
+    if(resultEl){
+      resultEl.className = 'ssp-result ssp-' + ergebnis;
+      resultEl.innerHTML = resultText;
+      document.getElementById('sspErgebnis').style.display = 'block';
+      document.getElementById('sspPhase1').style.display = 'none';
+      document.getElementById('sspWarten').style.display = 'none';
+      document.getElementById('spieleOverlay').classList.remove('hidden');
+    } else {
+      showChatInfo(resultText);
+    }
+    sspMeineWahl = null;
+  });
+
+  // SSP Herausforderung empfangen
+  channel.on('broadcast',{event:'ssp_challenge'},(payload)=>{
+    const p = payload.payload;
+    if(p.gegner !== currentUser.name) return; // Nicht für mich
+    // Popup zeigen
+    const popup = document.createElement('div');
+    popup.id = 'sspChallengePopup';
+    popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:20px 24px;z-index:99999;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(200,255,0,0.2);animation:popIn 0.3s ease;text-align:center;';
+    popup.innerHTML = `
+      <div style="font-size:32px;margin-bottom:8px">✂️🪨📄</div>
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:6px">${p.herausforderer} fordert dich heraus!</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Schere-Stein-Papier – wähle deine Waffe!</div>
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:14px">
+        <span style="font-size:36px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s" onclick="sspAntwort('${p.gameId}','${p.herausforderer}','✂️','Schere',this)">✂️</span>
+        <span style="font-size:36px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s" onclick="sspAntwort('${p.gameId}','${p.herausforderer}','🪨','Stein',this)">🪨</span>
+        <span style="font-size:36px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s" onclick="sspAntwort('${p.gameId}','${p.herausforderer}','📄','Papier',this)">📄</span>
+      </div>
+      <button onclick="document.getElementById('sspChallengePopup').remove()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 16px;color:var(--text-muted);cursor:pointer;font-size:13px">Ablehnen</button>
+    `;
+    document.body.appendChild(popup);
+  });
+
   // /cls Broadcast empfangen - alle User laden neu
   channel.on('broadcast',{event:'cls'},(payload)=>{
     if(payload.payload.room === (currentRoom||'hauptchat')){
