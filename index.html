@@ -1658,6 +1658,7 @@ async function adminCls(){
   const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
   if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
   await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
+  setTimeout(()=>loadMessages(), 500);
 }
 
 async function closePmPopup(pmId, btn){
@@ -2105,6 +2106,13 @@ function subscribeMessages(){
   channel.on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},(payload)=>{
     document.querySelector(`[data-msg-id="${payload.old.id}"]`)?.remove();
   });
+  // /cls Broadcast empfangen - alle User laden neu
+  channel.on('broadcast',{event:'cls'},(payload)=>{
+    if(payload.payload.room === (currentRoom||'hauptchat')){
+      document.getElementById('messagesArea').innerHTML='';
+      setTimeout(()=>loadMessages(), 500);
+    }
+  });
   channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async(payload)=>{
     const area=document.getElementById('messagesArea');
     let msg=payload.new;
@@ -2406,7 +2414,10 @@ async function handleCommand(content){
     // ALLE Nachrichten im Raum löschen
     const {error} = await sb.from('messages').delete().eq('room', currentRoom||'hauptchat');
     if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
+    // Alle User informieren via Broadcast
+    await subscription.send({type:'broadcast',event:'cls',payload:{room:currentRoom||'hauptchat'}});
     await sendSystemMsg(`🧹 ${currentUser.name} hat alle Nachrichten gelöscht!`);
+    setTimeout(()=>loadMessages(), 500);
     return true;
   }
 
