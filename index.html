@@ -1195,12 +1195,51 @@ const EMOJIS = {
 let currentUser = null, subscription = null, pendingFile = null;
 let isDark = true;
 let inactivityTimer = null;
-const INACTIVITY_MINUTES = 20;
+let inactivityWarnTimer = null;
+let countdownInterval = null;
+const INACTIVITY_MINUTES = 30;
+const WARN_BEFORE_MINUTES = 3;
 
 function resetInactivityTimer(){
   if(!currentUser) return;
+  // Alle Timer zurücksetzen
   clearTimeout(inactivityTimer);
+  clearTimeout(inactivityWarnTimer);
+  clearInterval(countdownInterval);
+  // Warn-Popup entfernen falls vorhanden
+  document.getElementById('timeoutWarnPopup')?.remove();
+
+  // Warn-Timer: 3 Minuten vor Timeout
+  inactivityWarnTimer = setTimeout(()=>{
+    let sekundenLeft = WARN_BEFORE_MINUTES * 60;
+    // Warn-Popup erstellen
+    const popup = document.createElement('div');
+    popup.id = 'timeoutWarnPopup';
+    popup.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--surface);border:2px solid #f59e0b;border-radius:16px;padding:16px 24px;z-index:99999;max-width:360px;width:90%;box-shadow:0 4px 24px rgba(245,158,11,0.3);text-align:center;animation:popIn 0.3s ease;';
+    popup.innerHTML = `
+      <div style="font-size:20px;margin-bottom:6px">⏰</div>
+      <div style="font-size:14px;font-weight:700;color:#f59e0b;margin-bottom:4px">Timeout in <span id="timeoutCountdown">${WARN_BEFORE_MINUTES}:00</span></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Schreibe etwas um im Chat zu bleiben!</div>
+      <button onclick="resetInactivityTimer()" style="background:#f59e0b;border:none;border-radius:8px;padding:8px 20px;color:#0a0a0f;font-weight:700;cursor:pointer;font-size:13px;width:100%">✅ Ich bin noch da!</button>
+    `;
+    document.body.appendChild(popup);
+
+    // Countdown
+    countdownInterval = setInterval(()=>{
+      sekundenLeft--;
+      const min = Math.floor(sekundenLeft/60);
+      const sek = sekundenLeft%60;
+      const el = document.getElementById('timeoutCountdown');
+      if(el) el.textContent = min+':'+(sek<10?'0':'')+sek;
+      if(sekundenLeft <= 0) clearInterval(countdownInterval);
+    }, 1000);
+
+  }, (INACTIVITY_MINUTES - WARN_BEFORE_MINUTES) * 60 * 1000);
+
+  // Haupt-Timer: nach 30 Minuten abmelden
   inactivityTimer = setTimeout(()=>{
+    document.getElementById('timeoutWarnPopup')?.remove();
+    clearInterval(countdownInterval);
     showChatInfo('⏰ Du wurdest wegen Inaktivität abgemeldet.');
     setTimeout(()=>logout(), 2000);
   }, INACTIVITY_MINUTES * 60 * 1000);
@@ -1208,7 +1247,11 @@ function resetInactivityTimer(){
 
 function stopInactivityTimer(){
   clearTimeout(inactivityTimer);
+  clearTimeout(inactivityWarnTimer);
+  clearInterval(countdownInterval);
   inactivityTimer = null;
+  inactivityWarnTimer = null;
+  document.getElementById('timeoutWarnPopup')?.remove();
 }
 const SUPERADMINS = ['pampersbengel_oleg','daddy_dominik']; // Diese Namen können nicht entfernt werden
 const knebelList = {};
@@ -1773,8 +1816,12 @@ function startApp(){
   setTimeout(()=>sendSystemMsg(`👋 ${currentUser.name} betritt den Chat`), 1500);
   // Inaktivitäts-Timer starten
   resetInactivityTimer();
-  // Bei Aktivität Timer zurücksetzen
-  ['keydown','mousedown','touchstart'].forEach(ev=>document.addEventListener(ev, resetInactivityTimer));
+  // Timer wird nur beim Tippen im Chat-Eingabefeld zurückgesetzt
+  const chatInput = document.getElementById('msgInput');
+  if(chatInput){
+    chatInput.addEventListener('keydown', resetInactivityTimer);
+    chatInput.addEventListener('input', resetInactivityTimer);
+  }
 }
 
 // RÄUME
