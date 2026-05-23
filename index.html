@@ -3002,20 +3002,29 @@ function subscribeGagged(){
   // Realtime: neue Einträge
   sb.channel('gagged-channel')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'gagged_users'},payload=>{
-      if(payload.new.user_name.toLowerCase()===currentUser.name.toLowerCase()){
+      const gName = payload.new.user_name.toLowerCase();
+      // knebelList für Online-Liste aktualisieren (Blinken)
+      knebelList[gName] = new Date(payload.new.gagged_until).getTime();
+      renderOnlineUsers(Object.values(subscription?.presenceState()||{}).flat());
+      if(gName===currentUser.name.toLowerCase()){
         window.isGagged=true;
         const remaining=Math.ceil((new Date(payload.new.gagged_until)-Date.now())/60000);
         showChatInfo('🔇 Du wurdest für '+remaining+' Minute(n) geknebelt!');
         const ms=new Date(payload.new.gagged_until)-Date.now();
         if(ms>0) setTimeout(()=>{
           window.isGagged=false;
+          delete knebelList[gName];
           showChatInfo('🔊 Du bist wieder frei!');
           sb.from('gagged_users').delete().ilike('user_name',currentUser.name).then(()=>{});
+          renderOnlineUsers(Object.values(subscription?.presenceState()||{}).flat());
         },ms);
       }
     })
     .on('postgres_changes',{event:'DELETE',schema:'public',table:'gagged_users'},payload=>{
-      if((payload.old.user_name||'').toLowerCase()===currentUser.name.toLowerCase()){
+      const gName = (payload.old.user_name||'').toLowerCase();
+      delete knebelList[gName];
+      renderOnlineUsers(Object.values(subscription?.presenceState()||{}).flat());
+      if(gName===currentUser.name.toLowerCase()){
         window.isGagged=false;
         showChatInfo('🔊 Du wurdest entknebelt!');
       }
