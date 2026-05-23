@@ -202,6 +202,10 @@
   .online-user:hover { background:var(--surface2); }
   .online-user-avatar { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative; }
   .online-user-avatar.gagged { animation:gaggedBlink 1s infinite; }
+  /* SPIELE */
+  .ssp-btn { font-size:40px;cursor:pointer;padding:10px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s;display:inline-block;user-select:none; }
+  .ssp-btn:hover { border-color:var(--accent);transform:scale(1.1); }
+  .ssp-btn.selected { border-color:var(--accent);background:rgba(200,255,0,0.15); }
   @keyframes gaggedBlink { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0.9);} }
   .online-user-avatar::after { content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;background:var(--online);border-radius:50%;border:2px solid var(--surface); }
   .online-user-name { font-size:12px;font-weight:600;color:var(--text);overflow:hidden;word-break:break-word;line-height:1.3; }
@@ -798,6 +802,48 @@
   </div>
 </div>
 
+<!-- SPIELE MODAL -->
+<div class="overlay hidden" id="spieleOverlay" onclick="closeSpiele(event)">
+  <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-logo" style="margin:0">🎮 Spiele</div>
+      <button onclick="closeSpiele()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="sspContainer">
+      <!-- Phase 1: Gegner wählen -->
+      <div id="sspPhaseGegner">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Wen forderst du heraus?</div>
+        <select id="sspGegnerSelect" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-size:14px;margin-bottom:14px"></select>
+        <div style="font-size:14px;font-weight:600;text-align:center;margin-bottom:12px">Deine Wahl:</div>
+        <div style="display:flex;justify-content:center;gap:14px;margin-bottom:16px">
+          <span class="ssp-btn" id="sspBtnS" onclick="sspWaehle('Schere')">✂️</span>
+          <span class="ssp-btn" id="sspBtnSt" onclick="sspWaehle('Stein')">🪨</span>
+          <span class="ssp-btn" id="sspBtnP" onclick="sspWaehle('Papier')">📄</span>
+        </div>
+        <div id="sspWarteText" style="display:none;text-align:center;color:var(--text-muted);font-size:13px">⏳ Warte auf Gegner...</div>
+      </div>
+      <!-- Phase 2: Ergebnis -->
+      <div id="sspPhaseErgebnis" style="display:none;text-align:center">
+        <div id="sspErgebnisText" style="font-size:16px;font-weight:700;padding:16px;border-radius:12px;margin-bottom:14px"></div>
+        <button class="btn-primary" onclick="sspReset()" style="width:100%">🔄 Nochmal spielen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHALLENGE POPUP (für Gegner) -->
+<div id="sspChallengePopup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:20px 24px;z-index:99999;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(200,255,0,0.2);text-align:center;">
+  <div style="font-size:28px;margin-bottom:8px">✂️🪨📄</div>
+  <div id="sspChallengeTitel" style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:6px"></div>
+  <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Wähle deine Waffe!</div>
+  <div style="display:flex;justify-content:center;gap:12px;margin-bottom:14px">
+    <span class="ssp-btn" onclick="sspAntworten('Schere')">✂️</span>
+    <span class="ssp-btn" onclick="sspAntworten('Stein')">🪨</span>
+    <span class="ssp-btn" onclick="sspAntworten('Papier')">📄</span>
+  </div>
+  <button onclick="document.getElementById('sspChallengePopup').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 16px;color:var(--text-muted);cursor:pointer;font-size:13px">Ablehnen</button>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="">
@@ -872,6 +918,7 @@
           <button class="toolbar-btn" onclick="toggleWhisperPicker()" id="whisperBtn">🤫 <span>Flüstern</span></button>
           <button class="toolbar-btn" onclick="openVoteModal()">🗳️ <span>Abstimmung</span></button>
           <button class="toolbar-btn" onclick="saveChat()">💾 <span>Chat speichern</span></button>
+          <button class="toolbar-btn" onclick="openSpiele()">✂️ <span>Spiele</span></button>
           <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
         </div>
 
@@ -1757,6 +1804,139 @@ async function saveChat(){
   }
 }
 
+// ===== SCHERE STEIN PAPIER =====
+let sspAktuelleGameId = null;
+let sspMeineWahl = null;
+
+function openSpiele(){
+  sspReset();
+  // Gegner-Liste füllen
+  const sel = document.getElementById('sspGegnerSelect');
+  sel.innerHTML = '<option value="">-- Gegner wählen --</option>';
+  document.querySelectorAll('.online-user-name').forEach(el => {
+    const name = el.childNodes[0]?.textContent?.trim().replace(' 💤','') || '';
+    if(name && name !== currentUser.name){
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  });
+  document.getElementById('spieleOverlay').classList.remove('hidden');
+}
+
+function closeSpiele(e){
+  if(!e || e.target===document.getElementById('spieleOverlay'))
+    document.getElementById('spieleOverlay').classList.add('hidden');
+}
+
+function sspReset(){
+  sspAktuelleGameId = null;
+  sspMeineWahl = null;
+  document.getElementById('sspPhaseGegner').style.display = 'block';
+  document.getElementById('sspPhaseErgebnis').style.display = 'none';
+  document.getElementById('sspWarteText').style.display = 'none';
+  document.querySelectorAll('.ssp-btn').forEach(b=>b.classList.remove('selected'));
+}
+
+async function sspWaehle(wahl){
+  const gegner = document.getElementById('sspGegnerSelect').value;
+  if(!gegner){ showChatInfo('❌ Bitte erst einen Gegner wählen!'); return; }
+
+  sspMeineWahl = wahl;
+  // Button markieren
+  document.querySelectorAll('#sspPhaseGegner .ssp-btn').forEach(b=>b.classList.remove('selected'));
+  const ids = {Schere:'sspBtnS', Stein:'sspBtnSt', Papier:'sspBtnP'};
+  document.getElementById(ids[wahl])?.classList.add('selected');
+  document.getElementById('sspWarteText').style.display = 'block';
+
+  // Spiel in DB speichern
+  const {data, error} = await sb.from('ssp_games').insert({
+    herausforderer: currentUser.name,
+    gegner: gegner,
+    wahl_h: wahl,
+    status: 'offen'
+  }).select().single();
+
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  sspAktuelleGameId = data.id;
+}
+
+async function sspAntworten(wahl){
+  document.getElementById('sspChallengePopup').style.display = 'none';
+  if(!sspAktuelleGameId){ showChatInfo('❌ Kein aktives Spiel!'); return; }
+
+  // Antwort in DB speichern
+  const {data, error} = await sb.from('ssp_games')
+    .update({wahl_g: wahl, status: 'fertig'})
+    .eq('id', sspAktuelleGameId)
+    .select().single();
+
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  // Ergebnis wird via Realtime angezeigt
+}
+
+function sspBerechne(ich, gegner){
+  if(ich===gegner) return 'draw';
+  if((ich==='Schere'&&gegner==='Papier')||(ich==='Stein'&&gegner==='Schere')||(ich==='Papier'&&gegner==='Stein')) return 'win';
+  return 'lose';
+}
+
+function sspZeigeErgebnis(wahlH, wahlG, herausforderer, gegner){
+  const emojis = {Schere:'✂️', Stein:'🪨', Papier:'📄'};
+  const ichBinH = currentUser.name === herausforderer;
+  const meineWahl = ichBinH ? wahlH : wahlG;
+  const gegnerWahl = ichBinH ? wahlG : wahlH;
+  const gegnerName = ichBinH ? gegner : herausforderer;
+  const ergebnis = sspBerechne(meineWahl, gegnerWahl);
+
+  let text = '';
+  let style = '';
+  if(ergebnis==='win'){
+    text = '🏆 Du gewinnst!<br>'+emojis[meineWahl]+' schlägt '+emojis[gegnerWahl];
+    style = 'background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#22c55e;';
+  } else if(ergebnis==='lose'){
+    text = '😅 '+gegnerName+' gewinnt!<br>'+emojis[gegnerWahl]+' schlägt '+emojis[meineWahl];
+    style = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;';
+  } else {
+    text = '🤝 Unentschieden!<br>Beide: '+emojis[meineWahl];
+    style = 'background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);color:var(--accent);';
+  }
+
+  const el = document.getElementById('sspErgebnisText');
+  el.style.cssText = style;
+  el.innerHTML = text;
+  document.getElementById('sspPhaseGegner').style.display = 'none';
+  document.getElementById('sspPhaseErgebnis').style.display = 'block';
+  document.getElementById('spieleOverlay').classList.remove('hidden');
+
+  // Im Chat posten
+  sendSystemMsg('✂️ '+herausforderer+' ('+emojis[wahlH]+') vs '+gegner+' ('+emojis[wahlG]+') → '+(sspBerechne(wahlH,wahlG)==='win'?'🏆 '+herausforderer+' gewinnt!':sspBerechne(wahlH,wahlG)==='lose'?'🏆 '+gegner+' gewinnt!':'🤝 Unentschieden!'));
+}
+
+function subscribeSSP(){
+  sb.channel('ssp-channel')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ssp_games'},payload=>{
+      const g = payload.new;
+      // Bin ich der Gegner? Challenge-Popup zeigen
+      if(g.gegner === currentUser.name && g.status === 'offen'){
+        sspAktuelleGameId = g.id;
+        document.getElementById('sspChallengeTitel').textContent = g.herausforderer+' fordert dich heraus!';
+        document.getElementById('sspChallengePopup').style.display = 'block';
+      }
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ssp_games'},payload=>{
+      const g = payload.new;
+      if(g.status !== 'fertig') return;
+      // Bin ich beteiligt?
+      if(g.herausforderer !== currentUser.name && g.gegner !== currentUser.name) return;
+      sspZeigeErgebnis(g.wahl_h, g.wahl_g, g.herausforderer, g.gegner);
+      // Spiel aus DB löschen
+      setTimeout(()=>sb.from('ssp_games').delete().eq('id',g.id), 3000);
+    })
+    .subscribe();
+}
+
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
 function closeHilfe(e){ if(!e||e.target===document.getElementById('hilfeOverlay')) document.getElementById('hilfeOverlay').classList.add('hidden'); }
 
@@ -1788,6 +1968,7 @@ function startApp(){
   subscribeVotes();
   subscribePinboard();
   subscribeGagged();
+  subscribeSSP();
   // Links laden
   loadLinks();
   // Admin-Button anzeigen
