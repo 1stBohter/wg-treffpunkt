@@ -2124,7 +2124,8 @@ async function switchRoom(room){
       isGuest: currentUser.isGuest,
       isAdmin: currentUser.isAdmin||false,
       room: room,
-      online_at: new Date().toISOString()
+      photoUrl: currentUser.photoUrl||null,
+        online_at: new Date().toISOString()
     });
   }
   // Raumwechsel-Nachricht
@@ -2196,14 +2197,18 @@ function renderMsg(msg){
     if(!isSender && !isRecipient) return null;
   }
   const t=theme(msg.color_index);
-  const avatarEmoji=msg.avatar||(isGuest?'👤':'⭐');
+  const msgPhotoUrl = msg.photo_url || null;
+  const avatarEmoji = msgPhotoUrl
+    ? '<img src="'+msgPhotoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+    : (msg.avatar||(isGuest?'👤':'⭐'));
 
   // Avatar style
   let avStyle='';
-  if(t){ avStyle=`background:${t.av};color:${t.tx}`; }
+  if(msgPhotoUrl){ avStyle='background:none;overflow:hidden;'; }
+  else if(t){ avStyle=`background:${t.av};color:${t.tx}`; }
   else if(isGuest){ avStyle='background:linear-gradient(135deg,#374151,#6b7280)'; }
   else { avStyle='background:linear-gradient(135deg,#7c3aed,#5b21b6)'; }
-  const avClass=`msg-avatar${(!t&&isGuest)?' guest-style':''}`;
+  const avClass=`msg-avatar${(!t&&isGuest&&!msgPhotoUrl)?' guest-style':''}`;
 
   // Bubble content
   let bubbleContent=msg.content?parseSmilies(msg.content):'';
@@ -2486,6 +2491,7 @@ function subscribeMessages(){
         isGuest: currentUser.isGuest,
         isAdmin: currentUser.isAdmin||false,
         room: currentRoom||'hauptchat',
+        photoUrl: currentUser.photoUrl||null,
         online_at: new Date().toISOString()
       });
       // Doppelte Namen prüfen
@@ -2537,7 +2543,7 @@ function renderOnlineUsers(users){
     div.className='online-user';
     const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
     const avatarContent = u.photoUrl
-      ? `<img src="${u.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      ? '<img src="'+u.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
       : (u.avatar||'👤');
     div.innerHTML=`
       <div class="online-user-avatar ${isGagged?'gagged':''}" style="${u.photoUrl?'background:none':avStyle};${u.away?'opacity:0.6':''}">${avatarContent}</div>
@@ -2623,7 +2629,7 @@ async function sendMessage(){
   const payload={
     content:content||null,user_id:currentUser.id,user_name:currentUser.name,
     is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
-    avatar:currentUser.avatar||null,media_url,media_type,
+    avatar:currentUser.avatar||null,photo_url:currentUser.photoUrl||null,media_url,media_type,
     whisper_to: whisperTarget?whisperTarget.name:null,
     whisper_to_name: whisperTarget?whisperTarget.name:null,
     room: currentRoom,
@@ -2685,6 +2691,7 @@ async function handleCommand(content){
         room: currentRoom||'hauptchat',
         away: true,
         awayReason: grund,
+        photoUrl: currentUser.photoUrl||null,
         online_at: new Date().toISOString()
       });
     }
@@ -2706,6 +2713,7 @@ async function handleCommand(content){
         isAdmin: currentUser.isAdmin||false,
         room: currentRoom||'hauptchat',
         away: false,
+        photoUrl: currentUser.photoUrl||null,
         online_at: new Date().toISOString()
       });
     }
@@ -3006,7 +3014,7 @@ function showGifs(results){
 }
 async function sendGif(url){
   document.getElementById('emojiPanel').classList.remove('open');
-  await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,media_url:url,media_type:'image/gif'});
+  await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,photo_url:currentUser.photoUrl||null,media_url:url,media_type:'image/gif'});
 }
 
 // VOTING
