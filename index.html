@@ -1914,27 +1914,39 @@ function sspZeigeErgebnis(wahlH, wahlG, herausforderer, gegner){
   sendSystemMsg('✂️ '+herausforderer+' ('+emojis[wahlH]+') vs '+gegner+' ('+emojis[wahlG]+') → '+(sspBerechne(wahlH,wahlG)==='win'?'🏆 '+herausforderer+' gewinnt!':sspBerechne(wahlH,wahlG)==='lose'?'🏆 '+gegner+' gewinnt!':'🤝 Unentschieden!'));
 }
 
+let sspPollInterval = null;
+
 function subscribeSSP(){
-  sb.channel('ssp-channel')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ssp_games'},payload=>{
-      const g = payload.new;
-      // Bin ich der Gegner? Challenge-Popup zeigen
-      if(g.gegner === currentUser.name && g.status === 'offen'){
+  // Alle 3 Sekunden prüfen ob eine Herausforderung oder ein Ergebnis da ist
+  sspPollInterval = setInterval(async()=>{
+    if(!currentUser) return;
+    // Offene Herausforderung für mich?
+    const {data:challenges} = await sb.from('ssp_games')
+      .select('*')
+      .eq('gegner', currentUser.name)
+      .eq('status', 'offen')
+      .limit(1);
+    if(challenges && challenges.length > 0){
+      const g = challenges[0];
+      if(sspAktuelleGameId !== g.id){
         sspAktuelleGameId = g.id;
         document.getElementById('sspChallengeTitel').textContent = g.herausforderer+' fordert dich heraus!';
         document.getElementById('sspChallengePopup').style.display = 'block';
       }
-    })
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ssp_games'},payload=>{
-      const g = payload.new;
-      if(g.status !== 'fertig') return;
-      // Bin ich beteiligt?
-      if(g.herausforderer !== currentUser.name && g.gegner !== currentUser.name) return;
+    }
+    // Fertiges Spiel für mich?
+    const {data:fertig} = await sb.from('ssp_games')
+      .select('*')
+      .eq('status', 'fertig')
+      .or('herausforderer.eq.'+currentUser.name+',gegner.eq.'+currentUser.name)
+      .limit(1);
+    if(fertig && fertig.length > 0){
+      const g = fertig[0];
       sspZeigeErgebnis(g.wahl_h, g.wahl_g, g.herausforderer, g.gegner);
       // Spiel aus DB löschen
-      setTimeout(()=>sb.from('ssp_games').delete().eq('id',g.id), 3000);
-    })
-    .subscribe();
+      await sb.from('ssp_games').delete().eq('id', g.id);
+    }
+  }, 3000);
 }
 
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
