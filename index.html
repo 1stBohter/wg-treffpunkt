@@ -13,18 +13,18 @@
     --text: #f0f0f8; --text-muted: #7070a0; --online: #22c55e;
   }
   * { margin:0;padding:0;box-sizing:border-box; }
-  body { font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column; }
+  body { font-family:sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column; }
   body::before { content:'';position:fixed;top:-30%;right:-20%;width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%);pointer-events:none;z-index:0; }
   body::after { content:'';position:fixed;bottom:-20%;left:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(200,255,0,0.07) 0%,transparent 70%);pointer-events:none;z-index:0; }
   /* LINKLEISTE */
   .link-bar { display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 16px;border-top:1px solid var(--border);background:var(--surface);min-height:34px;flex-shrink:0; }
   .link-bar a { color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;padding:3px 8px;border-radius:6px;border:1px solid rgba(200,255,0,0.2);transition:all 0.15s;white-space:nowrap; }
   .link-bar a:hover { background:rgba(200,255,0,0.1);border-color:var(--accent); }
-  .link-bar-edit { margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 8px;border-radius:6px;transition:all 0.15s;font-family:'DM Sans',sans-serif; }
+  .link-bar-edit { margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 8px;border-radius:6px;transition:all 0.15s;font-family:sans-serif; }
   .link-bar-edit:hover { border-color:var(--accent);color:var(--accent); }
   .link-bar-sep { color:var(--border);font-size:12px;user-select:none; }
 
-  .admin-quick-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;text-align:left;font-family:'DM Sans',sans-serif; }
+  .admin-quick-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;text-align:left;font-family:sans-serif; }
   .admin-quick-btn:hover { border-color:var(--accent);color:var(--accent);background:rgba(200,255,0,0.05); }
 
 
@@ -85,7 +85,7 @@
     text-shadow:0 2px 20px rgba(0,0,0,0.5);
   }
   .building-badge-sub {
-    font-family:'DM Sans',sans-serif;font-size:14px;
+    font-family:sans-serif;font-size:14px;
     color:var(--accent);font-weight:600;letter-spacing:2px;text-transform:uppercase;
     margin-top:4px;
   }
@@ -150,7 +150,7 @@
   .divider::before,.divider::after { background:rgba(255,255,255,0.12); }
   .input-group { margin-bottom:14px; }
   .input-group label { display:block;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px; }
-  .input-group input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
+  .input-group input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-family:sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
   .input-group input:focus { border-color:var(--accent2); }
   .input-group input::placeholder { color:var(--text-muted); }
 
@@ -163,7 +163,7 @@
   .avatar-preview-info strong { display:block;color:var(--text);font-size:14px; }
 
   .avatar-tabs { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px; }
-  .avatar-tab { background:none;border:none;cursor:pointer;font-size:11px;padding:5px 10px;border-radius:8px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s; }
+  .avatar-tab { background:none;border:none;cursor:pointer;font-size:11px;padding:5px 10px;border-radius:8px;color:var(--text-muted);font-family:sans-serif;font-weight:500;transition:all 0.15s; }
   .avatar-tab:hover,.avatar-tab.active { background:var(--surface2);color:var(--text); }
   .avatar-grid { display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:180px;overflow-y:auto; }
   .avatar-grid::-webkit-scrollbar { width:3px; }
@@ -181,7 +181,7 @@
 
   .btn-primary { width:100%;background:var(--accent);color:#0a0a0f;border:none;border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:6px; }
   .btn-primary:hover { background:#d4ff20;transform:translateY(-1px); }
-  .btn-ghost { width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s;margin-top:8px; }
+  .btn-ghost { width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s;margin-top:8px; }
   .btn-ghost:hover { border-color:var(--text-muted);color:var(--text); }
   .divider { display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--text-muted);font-size:13px; }
   .divider::before,.divider::after { content:'';flex:1;height:1px;background:var(--border); }
@@ -230,7 +230,7 @@
 
   /* HEADER CONTROLS */
   .header-controls { display:flex;align-items:center;gap:6px; }
-  .ctrl-btn { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 9px;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;font-weight:600; }
+  .ctrl-btn { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 9px;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:sans-serif;font-weight:600; }
   .ctrl-btn:hover { border-color:var(--accent);color:var(--accent); }
   .ctrl-btn.active { background:var(--accent);color:#0a0a0f;border-color:var(--accent); }
 
@@ -330,7 +330,7 @@
   .emoji-tabs { display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;align-items:center;flex:1; }
   .emoji-close-btn { background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:6px;flex-shrink:0;line-height:1; }
   .emoji-close-btn:hover { color:var(--text);background:var(--surface2); }
-  .emoji-tab { background:none;border:none;cursor:pointer;font-size:17px;padding:4px 7px;border-radius:8px;transition:background 0.15s;opacity:0.6;font-family:'DM Sans',sans-serif; }
+  .emoji-tab { background:none;border:none;cursor:pointer;font-size:17px;padding:4px 7px;border-radius:8px;transition:background 0.15s;opacity:0.6;font-family:sans-serif; }
   .emoji-tab:hover,.emoji-tab.active { background:var(--surface2);opacity:1; }
   .emoji-grid { display:grid;grid-template-columns:repeat(8,1fr);gap:2px;overflow-y:auto;height:180px; }
   .emoji-grid::-webkit-scrollbar { width:3px; }
@@ -352,7 +352,7 @@
     color:rgba(200,255,0,0.35);pointer-events:none;user-select:none;
     white-space:nowrap;
   }
-  .toolbar-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text-muted);cursor:pointer;font-size:16px;transition:all 0.2s;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif; }
+  .toolbar-btn { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text-muted);cursor:pointer;font-size:16px;transition:all 0.2s;display:flex;align-items:center;gap:5px;font-family:sans-serif; }
   .toolbar-btn span { font-size:12px; }
   .toolbar-btn:hover { border-color:var(--accent2);color:var(--text); }
   .input-toolbar { display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:8px; }
@@ -367,7 +367,7 @@
 
   .input-box { display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:8px 8px 8px 16px;transition:border-color 0.2s; }
   .input-box:focus-within { border-color:var(--accent2); }
-  .input-box input { flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px; }
+  .input-box input { flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:sans-serif;font-size:16px; }
   .input-box input::placeholder { color:var(--text-muted); }
   .btn-send { background:var(--accent);border:none;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;flex-shrink:0; }
   .btn-send:hover { background:#d4ff20;transform:scale(1.05); }
@@ -379,19 +379,19 @@
   .vote-modal { background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:420px;max-width:95vw;animation:slideUp 0.25s ease; }
   .vote-modal h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);margin-bottom:18px; }
   .vote-modal label { display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px; }
-  .vote-modal input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
+  .vote-modal input { width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:sans-serif;font-size:14px;outline:none;transition:border-color 0.2s; }
   .vote-modal input:focus { border-color:var(--accent2); }
   .vote-btn-row { display:flex;gap:10px;margin-top:20px; }
   .vote-modal .btn-start { flex:1;background:var(--accent);color:#0a0a0f;border:none;border-radius:10px;padding:11px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s; }
   .vote-modal .btn-start:hover { background:#d4ff20; }
-  .vote-modal .btn-cancel { background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s; }
+  .vote-modal .btn-cancel { background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-family:sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s; }
   .vote-modal .btn-cancel:hover { border-color:var(--text-muted);color:var(--text); }
 
   .vote-card { background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin:4px 0;width:100%; }
   .vote-card-title { font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;line-height:1.3; }
   .vote-card-title::before { content:'🗳️ '; }
   .vote-options { display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap; }
-  .vote-option-btn { flex:1;min-width:100px;padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center; }
+  .vote-option-btn { flex:1;min-width:100px;padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center; }
   .vote-option-btn:hover { border-color:var(--accent2);color:var(--text); }
   .vote-option-btn.voted-a { border-color:#22c55e;background:rgba(34,197,94,0.15);color:#22c55e; }
   .vote-option-btn.voted-b { border-color:#ef4444;background:rgba(239,68,68,0.15);color:#ef4444; }
@@ -414,7 +414,7 @@
   .pinboard-header { display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0; }
   .pinboard-header h2 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent); }
   .pinboard-tabs { display:flex;gap:6px; }
-  .pinboard-tab { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-muted);transition:all 0.2s;font-family:'DM Sans',sans-serif; }
+  .pinboard-tab { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-muted);transition:all 0.2s;font-family:sans-serif; }
   .pinboard-tab.active { background:var(--accent);color:#0a0a0f;border-color:var(--accent); }
   .pinboard-close { background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;padding:0 4px;transition:color 0.2s;line-height:1; }
   .pinboard-close:hover { color:var(--text); }
@@ -423,7 +423,7 @@
   .pinboard-body::-webkit-scrollbar-thumb { background:var(--border); }
 
   .pinboard-form { background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:18px; }
-  .pinboard-form input,.pinboard-form textarea { width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;margin-bottom:8px; }
+  .pinboard-form input,.pinboard-form textarea { width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;margin-bottom:8px; }
   .pinboard-form input:focus,.pinboard-form textarea:focus { border-color:var(--accent2); }
   .pinboard-form textarea { resize:vertical;min-height:70px; }
   .pinboard-form-row { display:flex;gap:8px;align-items:center; }
@@ -705,23 +705,43 @@
       <button onclick="closeProfileEdit()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
     </div>
 
-    <div style="text-align:center;margin-bottom:20px">
-      <div id="profilePreviewAvatar" style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 8px;border:3px solid var(--accent);background:var(--surface2)">👤</div>
-      <div style="font-size:13px;color:var(--text-muted)">Klick auf Avatar oder Farbe zum Ändern</div>
+    <!-- Vorschau -->
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="profilePreviewAvatar" style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 8px;border:3px solid var(--accent);background:var(--surface2);overflow:hidden;">👤</div>
     </div>
 
-    <!-- AVATAR AUSWAHL -->
-    <div class="input-group">
-      <label>🎭 Avatar wählen</label>
-      <div id="profileAvatarTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;"></div>
-      <div id="profileAvatarGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:160px;overflow-y:auto;"></div>
+    <!-- TABS -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+      <button id="tabAvatarBtn" onclick="profileSwitchTab('avatar')" style="flex:1;padding:8px;border-radius:10px;border:2px solid var(--accent);background:rgba(200,255,0,0.1);color:var(--accent);cursor:pointer;font-weight:700;font-size:13px;font-family:sans-serif">🎭 Avatar</button>
+      <button id="tabFotoBtn" onclick="profileSwitchTab('foto')" style="flex:1;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:13px;font-family:sans-serif">📷 Foto</button>
     </div>
 
-    <!-- FARBE AUSWAHL -->
-    <div class="input-group" style="margin-top:14px">
-      <label>🎨 Chat-Farbe</label>
-      <div id="profileColorPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
-      <div id="profileColorLabel" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+    <!-- TAB: AVATAR -->
+    <div id="tabAvatarContent">
+      <div class="input-group">
+        <label>🎭 Avatar wählen</label>
+        <div id="profileAvatarTabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;"></div>
+        <div id="profileAvatarGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:160px;overflow-y:auto;"></div>
+      </div>
+      <div class="input-group" style="margin-top:14px">
+        <label>🎨 Chat-Farbe</label>
+        <div id="profileColorPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
+        <div id="profileColorLabel" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- TAB: FOTO -->
+    <div id="tabFotoContent" style="display:none">
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Lade ein Foto hoch das als Avatar angezeigt wird</div>
+        <input type="file" id="profileFotoInput" accept="image/*" onchange="profileFotoPreview(event)" style="display:none">
+        <button onclick="document.getElementById('profileFotoInput').click()" style="background:var(--surface2);border:2px dashed var(--border);border-radius:12px;padding:16px 24px;color:var(--text-muted);cursor:pointer;font-size:14px;width:100%;margin-bottom:12px">📷 Foto auswählen</button>
+        <div id="profileFotoVorschau" style="display:none;margin-bottom:12px">
+          <img id="profileFotoImg" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">So wird dein Foto aussehen</div>
+        </div>
+        <button onclick="profileFotoEntfernen()" style="background:none;border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:6px 14px;color:#ef4444;cursor:pointer;font-size:12px;display:none" id="profileFotoEntfernenBtn">🗑️ Foto entfernen</button>
+      </div>
     </div>
 
     <div id="profileError" class="error-msg"></div>
@@ -1429,7 +1449,7 @@ async function login(){
   const m=data.user.user_metadata;
   // Admin-Status aus chat_admins Tabelle prüfen
   const {data:adminCheck} = await sb.from('chat_admins').select('user_name').eq('user_name',(m.display_name||chatname).toLowerCase()).maybeSingle();
-  currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:!!adminCheck};
+  currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:!!adminCheck,photoUrl:m.photo_url||null};
   startApp();
 }
 
@@ -1501,6 +1521,44 @@ async function logout(){
 function theme(idx){ return (idx!==null&&idx!==undefined)?THEMES[idx]||THEMES[0]:null; }
 
 // ===== PROFIL BEARBEITEN =====
+let profileFotoFile = null;
+let profileAktivTab = 'avatar';
+
+function profileSwitchTab(tab){
+  profileAktivTab = tab;
+  const isAvatar = tab === 'avatar';
+  document.getElementById('tabAvatarContent').style.display = isAvatar ? 'block' : 'none';
+  document.getElementById('tabFotoContent').style.display = isAvatar ? 'none' : 'block';
+  document.getElementById('tabAvatarBtn').style.cssText = isAvatar ?
+    'flex:1;padding:8px;border-radius:10px;border:2px solid var(--accent);background:rgba(200,255,0,0.1);color:var(--accent);cursor:pointer;font-weight:700;font-size:13px;font-family:sans-serif' :
+    'flex:1;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:13px;font-family:sans-serif';
+  document.getElementById('tabFotoBtn').style.cssText = isAvatar ?
+    'flex:1;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;font-weight:600;font-size:13px;font-family:sans-serif' :
+    'flex:1;padding:8px;border-radius:10px;border:2px solid var(--accent);background:rgba(200,255,0,0.1);color:var(--accent);cursor:pointer;font-weight:700;font-size:13px;font-family:sans-serif';
+}
+
+function profileFotoPreview(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  profileFotoFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('profileFotoImg').src = e.target.result;
+    document.getElementById('profilePreviewAvatar').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    document.getElementById('profileFotoVorschau').style.display = 'block';
+    document.getElementById('profileFotoEntfernenBtn').style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function profileFotoEntfernen(){
+  profileFotoFile = null;
+  document.getElementById('profileFotoInput').value = '';
+  document.getElementById('profileFotoVorschau').style.display = 'none';
+  document.getElementById('profileFotoEntfernenBtn').style.display = 'none';
+  document.getElementById('profilePreviewAvatar').innerHTML = currentUser.avatar||'👤';
+  document.getElementById('profilePreviewAvatar').style.background = '';
+}
 let profileSelectedAvatar = null;
 let profileSelectedColor = null;
 
@@ -1581,30 +1639,53 @@ function closeProfileEdit(e){
 
 async function saveProfile(){
   if(!currentUser||currentUser.isGuest) return;
-  const newAvatar = profileSelectedAvatar?.e || currentUser.avatar;
-  const newColor = profileSelectedColor??currentUser.colorIndex;
-
   try{
+    let newAvatar = profileSelectedAvatar?.e || currentUser.avatar;
+    let newColor = profileSelectedColor??currentUser.colorIndex;
+    let photoUrl = currentUser.photoUrl || null;
+
+    // Foto hochladen wenn gewählt
+    if(profileAktivTab === 'foto' && profileFotoFile){
+      const ext = profileFotoFile.name.split('.').pop();
+      const fname = currentUser.id + '_avatar.' + ext;
+      const {error:ue} = await sb.storage.from('chat-media').upload(fname, profileFotoFile, {cacheControl:'3600', upsert:true});
+      if(ue) throw ue;
+      const {data:ud} = sb.storage.from('chat-media').getPublicUrl(fname);
+      photoUrl = ud.publicUrl;
+      newAvatar = null; // Kein Emoji wenn Foto
+    } else if(profileAktivTab === 'foto' && !profileFotoFile && !currentUser.photoUrl){
+      // Foto-Tab aber kein Foto - nichts ändern
+    } else if(profileAktivTab === 'avatar'){
+      photoUrl = null; // Avatar gewählt - Foto entfernen
+    }
+
     const {error} = await sb.auth.updateUser({
-      data: { avatar: newAvatar, color_index: newColor }
+      data: { avatar: newAvatar, color_index: newColor, photo_url: photoUrl }
     });
     if(error) throw error;
 
-    // Lokal aktualisieren
     currentUser.avatar = newAvatar;
     currentUser.colorIndex = newColor;
+    currentUser.photoUrl = photoUrl;
 
     // Header aktualisieren
     const av = document.getElementById('headerAvatar');
-    av.textContent = newAvatar;
-    const t = THEMES[newColor];
-    if(t){ av.style.background=t.av; av.style.color=t.tx; }
+    if(photoUrl){
+      av.innerHTML = '<img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+      av.style.background = 'none';
+      av.style.color = '';
+    } else {
+      av.innerHTML = newAvatar||'👤';
+      const t = THEMES[newColor];
+      if(t){ av.style.background=t.av; av.style.color=t.tx; }
+    }
 
     // Presence aktualisieren
     if(subscription){
       await subscription.track({
         name: currentUser.name,
-        avatar: newAvatar,
+        avatar: photoUrl ? '📷' : newAvatar,
+        photoUrl: photoUrl,
         color: newColor,
         isGuest: false,
         isAdmin: currentUser.isAdmin||false,
@@ -1613,6 +1694,7 @@ async function saveProfile(){
       });
     }
 
+    profileFotoFile = null;
     document.getElementById('profileOverlay').classList.add('hidden');
     showChatInfo('✅ Profil gespeichert!');
   } catch(e){
@@ -1966,9 +2048,14 @@ function startApp(){
   pendingFile=null;
   const t=theme(currentUser.colorIndex);
   const av=document.getElementById('headerAvatar');
-  av.textContent=currentUser.avatar||'👤';
-  if(t){ av.style.background=t.av; av.style.color=t.tx; }
-  else { av.style.background='rgba(55,65,81,0.5)'; }
+  if(currentUser.photoUrl){
+    av.innerHTML='<img src="'+currentUser.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    av.style.background='none';
+  } else {
+    av.textContent=currentUser.avatar||'👤';
+    if(t){ av.style.background=t.av; av.style.color=t.tx; }
+    else { av.style.background='rgba(55,65,81,0.5)'; }
+  }
   document.getElementById('headerName').textContent=currentUser.name;
   const wm=document.getElementById('userWatermark');wm.textContent=currentUser.name;wm.style.display='inline';
   const roleEl=document.getElementById('headerRole');
@@ -2449,8 +2536,11 @@ function renderOnlineUsers(users){
     const div=document.createElement('div');
     div.className='online-user';
     const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
+    const avatarContent = u.photoUrl
+      ? `<img src="${u.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : (u.avatar||'👤');
     div.innerHTML=`
-      <div class="online-user-avatar ${isGagged?'gagged':''}" style="${avStyle};${u.away?'opacity:0.6':''}">${u.avatar||'\u{1F464}'}</div>
+      <div class="online-user-avatar ${isGagged?'gagged':''}" style="${u.photoUrl?'background:none':avStyle};${u.away?'opacity:0.6':''}">${avatarContent}</div>
       <div class="online-user-name">${u.name||'Gast'}${u.away?' 💤':''}<br><span style="font-size:10px;color:${SUPERADMINS.includes((u.name||'').toLowerCase())?'#ff6b35':u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.away?awayLabel.replace(/<[^>]+>/g,''):(SUPERADMINS.includes((u.name||'').toLowerCase())?'⚡ Superadmin':u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member')}</span></div>
       ${!isMe?`<button class="whisper-btn" onclick="startWhisper('${(u.name||'Gast').replace(/'/g,"\\'")}','${u.id||''}')" title="\u{1F92B}">\u{1F92B}</button>`:''}`;
     list.appendChild(div);
