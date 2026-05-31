@@ -200,14 +200,14 @@
   .online-list::-webkit-scrollbar-thumb { background:var(--border); }
   .online-user { display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:10px;margin-bottom:3px;transition:background 0.15s; }
   .online-user:hover { background:var(--surface2); }
-  .online-user-avatar { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative; }
+  .online-user-avatar { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;position:relative; }
   .online-user-avatar.gagged { animation:gaggedBlink 1s infinite; }
   /* SPIELE */
   .ssp-btn { font-size:40px;cursor:pointer;padding:10px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s;display:inline-block;user-select:none; }
   .ssp-btn:hover { border-color:var(--accent);transform:scale(1.1); }
   .ssp-btn.selected { border-color:var(--accent);background:rgba(200,255,0,0.15); }
   @keyframes gaggedBlink { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0.9);} }
-  .online-user-avatar::after { content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;background:var(--online);border-radius:50%;border:2px solid var(--surface); }
+  .online-user-avatar::after { content:'';position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:var(--online);border-radius:50%;border:2px solid var(--surface); }
   .online-user-name { font-size:12px;font-weight:600;color:var(--text);overflow:hidden;word-break:break-word;line-height:1.3; }
 
   /* LIGHT MODE */
@@ -304,8 +304,8 @@
   .message { display:flex;gap:10px;align-items:flex-end;animation:msgIn 0.25s ease;padding:2px 0; }
   .message.own { flex-direction:row; }
 
-  .msg-avatar-wrap { display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:64px; }
-  .msg-avatar { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;border:2px solid transparent; }
+  .msg-avatar-wrap { display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:80px; }
+  .msg-avatar { width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;border:2px solid transparent; }
   .msg-avatar.guest-style { background:linear-gradient(135deg,#374151,#6b7280);font-size:14px;color:white;font-family:'Syne',sans-serif;font-weight:700; }
   .msg-avatar-name { font-size:12px;color:var(--text);text-align:center;margin-top:4px;max-width:60px;word-break:break-word;font-weight:700;line-height:1.2; }
 
@@ -2200,8 +2200,9 @@ function renderMsg(msg){
   }
   const t=theme(msg.color_index);
   const msgPhotoUrl = msg.photo_url || null;
-  const avatarEmoji = msgPhotoUrl
-    ? '<img src="'+msgPhotoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+  const msgPhotoSrc = msgPhotoUrl ? msgPhotoUrl + '?uid=' + (msg.user_id||'').slice(-6) : null;
+  const avatarEmoji = msgPhotoSrc
+    ? '<img src="'+msgPhotoSrc+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
     : (msg.avatar||(isGuest?'👤':'⭐'));
 
   // Avatar style
@@ -2544,8 +2545,9 @@ function renderOnlineUsers(users){
     const div=document.createElement('div');
     div.className='online-user';
     const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
-    const avatarContent = u.photoUrl
-      ? '<img src="'+u.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+    const photoSrc = u.photoUrl ? u.photoUrl + '?uid=' + (u.name||'').slice(-6) : null;
+    const avatarContent = photoSrc
+      ? '<img src="'+photoSrc+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
       : (u.avatar||'👤');
     div.innerHTML=`
       <div class="online-user-avatar ${isGagged?'gagged':''}" style="${u.photoUrl?'background:none':avStyle};${u.away?'opacity:0.6':''}">${avatarContent}</div>
