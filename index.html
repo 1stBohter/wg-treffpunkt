@@ -1452,6 +1452,7 @@ async function login(){
   // Admin-Status aus chat_admins Tabelle prüfen
   const {data:adminCheck} = await sb.from('chat_admins').select('user_name').eq('user_name',(m.display_name||chatname).toLowerCase()).maybeSingle();
   currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:!!adminCheck,photoUrl:m.photo_url||null};
+  await loadAllPhotos();
   startApp();
 }
 
@@ -1646,19 +1647,26 @@ async function saveProfile(){
     let newColor = profileSelectedColor??currentUser.colorIndex;
     let photoUrl = currentUser.photoUrl || null;
 
-    // Foto hochladen wenn gewählt
+    // Foto hochladen wenn gewählt - Dateiname FEST an Username gebunden!
+    const safeName = currentUser.name.toLowerCase().replace(/[^a-z0-9]/g,'_');
     if(profileAktivTab === 'foto' && profileFotoFile){
       const ext = profileFotoFile.name.split('.').pop();
-      const fname = currentUser.id + '_avatar.' + ext;
-      const {error:ue} = await sb.storage.from('chat-media').upload(fname, profileFotoFile, {cacheControl:'3600', upsert:true});
+      const fname = 'avatar_' + safeName + '.' + ext;
+      const {error:ue} = await sb.storage.from('chat-media').upload(fname, profileFotoFile, {cacheControl:'0', upsert:true});
       if(ue) throw ue;
       const {data:ud} = sb.storage.from('chat-media').getPublicUrl(fname);
       photoUrl = ud.publicUrl;
-      newAvatar = null; // Kein Emoji wenn Foto
+      newAvatar = null;
+      // In user_photos Tabelle speichern (fest an Username)
+      await sb.from('user_photos').upsert({user_name: currentUser.name.toLowerCase(), photo_url: photoUrl, updated_at: new Date().toISOString()});
+      userPhotos[currentUser.name.toLowerCase()] = photoUrl;
     } else if(profileAktivTab === 'foto' && !profileFotoFile && !currentUser.photoUrl){
-      // Foto-Tab aber kein Foto - nichts ändern
+      // Foto-Tab aber kein Foto
     } else if(profileAktivTab === 'avatar'){
-      photoUrl = null; // Avatar gewählt - Foto entfernen
+      photoUrl = null;
+      // Foto aus Tabelle entfernen
+      await sb.from('user_photos').delete().eq('user_name', currentUser.name.toLowerCase());
+      delete userPhotos[currentUser.name.toLowerCase()];
     }
 
     const {error} = await sb.auth.updateUser({
@@ -1697,6 +1705,9 @@ async function saveProfile(){
     }
 
     profileFotoFile = null;
+    // Anzeige aktualisieren
+    loadMessages();
+    if(subscription){ try{ renderOnlineUsers(Object.values(subscription.presenceState()||{}).flat()); }catch(e){} }
     document.getElementById('profileOverlay').classList.add('hidden');
     showChatInfo('✅ Profil gespeichert!');
   } catch(e){
@@ -2050,8 +2061,9 @@ function startApp(){
   pendingFile=null;
   const t=theme(currentUser.colorIndex);
   const av=document.getElementById('headerAvatar');
-  if(currentUser.photoUrl){
-    av.innerHTML='<img src="'+currentUser.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+  const myPhoto = getPhotoFor(currentUser.name);
+  if(myPhoto){
+    av.innerHTML='<img src="'+myPhoto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
     av.style.background='none';
   } else {
     av.textContent=currentUser.avatar||'👤';
@@ -2064,7 +2076,7 @@ function startApp(){
   if(roleEl) roleEl.textContent=SUPERADMINS.includes(currentUser.name.toLowerCase())?'⚡ Superadmin':currentUser.isAdmin?'👑 Admin':currentUser.isGuest?'👤 Gast':'⭐ Member';
   const msgInput=document.getElementById('msgInput');
   if(msgInput) msgInput.placeholder=`${currentUser.name} schreibt...`;
-  loadMessages();
+  loadAllPhotos().then(()=>{ loadMessages(); if(typeof renderOnlineUsers==='function' && subscription) try{renderOnlineUsers(Object.values(subscription.presenceState()||{}).flat());}catch(e){} });
   subscribeMessages();
   subscribeVotes();
   subscribePinboard();
@@ -2154,6 +2166,26 @@ async function sendSystemMsg(text){
 // MESSAGES
 function timeStr(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
 
+// Foto-Cache: user_name (lowercase) -> photo_url - EINZIGE Quelle der Wahrheit
+let userPhotos = {};
+
+async function loadAllPhotos(){
+  try {
+    const {data} = await sb.from('user_photos').select('user_name, photo_url');
+    userPhotos = {};
+    if(data) data.forEach(p => { userPhotos[p.user_name.toLowerCase()] = p.photo_url; });
+  } catch(e){ console.log('Fotos laden:', e); }
+}
+
+// Foto für einen Namen holen (mit Cache-Buster gegen Vertauschen)
+function getPhotoFor(name){
+  if(!name) return null;
+  const url = userPhotos[name.toLowerCase()];
+  if(!url) return null;
+  // Eindeutiger Cache-Buster pro Username
+  return url + '?u=' + encodeURIComponent(name.toLowerCase());
+}
+
 function renderMsg(msg){
   // PM-Nachrichten anzeigen
   if(msg.media_type==='pm'){
@@ -2199,19 +2231,18 @@ function renderMsg(msg){
     if(!isSender && !isRecipient) return null;
   }
   const t=theme(msg.color_index);
-  const msgPhotoUrl = msg.photo_url || null;
-  const msgPhotoSrc = msgPhotoUrl ? msgPhotoUrl + '?uid=' + (msg.user_id||'').slice(-6) : null;
+  const msgPhotoSrc = getPhotoFor(msg.user_name);
   const avatarEmoji = msgPhotoSrc
     ? '<img src="'+msgPhotoSrc+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
     : (msg.avatar||(isGuest?'👤':'⭐'));
 
   // Avatar style
   let avStyle='';
-  if(msgPhotoUrl){ avStyle='background:none;overflow:hidden;'; }
+  if(msgPhotoSrc){ avStyle='background:none;overflow:hidden;'; }
   else if(t){ avStyle=`background:${t.av};color:${t.tx}`; }
   else if(isGuest){ avStyle='background:linear-gradient(135deg,#374151,#6b7280)'; }
   else { avStyle='background:linear-gradient(135deg,#7c3aed,#5b21b6)'; }
-  const avClass=`msg-avatar${(!t&&isGuest&&!msgPhotoUrl)?' guest-style':''}`;
+  const avClass=`msg-avatar${(!t&&isGuest&&!msgPhotoSrc)?' guest-style':''}`;
 
   // Bubble content
   let bubbleContent=msg.content?parseSmilies(msg.content):'';
@@ -2545,12 +2576,12 @@ function renderOnlineUsers(users){
     const div=document.createElement('div');
     div.className='online-user';
     const awayLabel = u.away ? `<span style="color:#f59e0b;font-size:10px;">💤 ${u.awayReason||'Weg'}</span>` : '';
-    const photoSrc = u.photoUrl ? u.photoUrl + '?uid=' + (u.name||'').slice(-6) : null;
+    const photoSrc = getPhotoFor(u.name);
     const avatarContent = photoSrc
       ? '<img src="'+photoSrc+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
       : (u.avatar||'👤');
     div.innerHTML=`
-      <div class="online-user-avatar ${isGagged?'gagged':''}" style="${u.photoUrl?'background:none':avStyle};${u.away?'opacity:0.6':''}">${avatarContent}</div>
+      <div class="online-user-avatar ${isGagged?'gagged':''}" style="${photoSrc?'background:none':avStyle};${u.away?'opacity:0.6':''}">${avatarContent}</div>
       <div class="online-user-name">${u.name||'Gast'}${u.away?' 💤':''}<br><span style="font-size:10px;color:${SUPERADMINS.includes((u.name||'').toLowerCase())?'#ff6b35':u.isAdmin?'#c8ff00':'var(--text-muted)'};">${u.away?awayLabel.replace(/<[^>]+>/g,''):(SUPERADMINS.includes((u.name||'').toLowerCase())?'⚡ Superadmin':u.isAdmin?'\u{1F451} Admin':u.isGuest?'\u{1F464} Gast':'\u{2B50} Member')}</span></div>
       ${!isMe?`<button class="whisper-btn" onclick="startWhisper('${(u.name||'Gast').replace(/'/g,"\\'")}','${u.id||''}')" title="\u{1F92B}">\u{1F92B}</button>`:''}`;
     list.appendChild(div);
