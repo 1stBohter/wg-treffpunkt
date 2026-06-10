@@ -206,6 +206,11 @@
   .ssp-btn { font-size:40px;cursor:pointer;padding:10px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);transition:all 0.2s;display:inline-block;user-select:none; }
   .ssp-btn:hover { border-color:var(--accent);transform:scale(1.1); }
   .ssp-btn.selected { border-color:var(--accent);background:rgba(200,255,0,0.15); }
+  .ttt-cell { width:80px;height:80px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);font-size:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;user-select:none; }
+  .ttt-cell:hover { border-color:var(--accent); }
+  .ttt-cell.taken { cursor:default; }
+  .ttt-cell.taken:hover { border-color:var(--border); }
+  .ttt-cell.win { background:rgba(34,197,94,0.2);border-color:#22c55e; }
   @keyframes gaggedBlink { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0.9);} }
   .online-user-avatar::after { content:'';position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:var(--online);border-radius:50%;border:2px solid var(--surface); }
   .online-user-name { font-size:12px;font-weight:600;color:var(--text);overflow:hidden;word-break:break-word;line-height:1.3; }
@@ -829,7 +834,17 @@
       <div class="modal-logo" style="margin:0">🎮 Spiele</div>
       <button onclick="closeSpiele()" style="background:none;border:none;color:var(--text-muted);font-size:26px;cursor:pointer;line-height:1">×</button>
     </div>
-    <div id="sspContainer">
+    <!-- SPIELWAHL -->
+    <div id="spieleWahl">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Wähle ein Spiel:</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-primary" onclick="zeigeSpiel('ssp')">✂️ Schere-Stein-Papier</button>
+        <button class="btn-primary" onclick="zeigeSpiel('ttt')">⭕ Tic-Tac-Toe</button>
+      </div>
+    </div>
+
+    <div id="sspContainer" style="display:none">
+      <button onclick="zurueckZurSpielwahl()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;margin-bottom:10px;padding:0">← Zurück zur Spielwahl</button>
       <!-- Phase 1: Gegner wählen -->
       <div id="sspPhaseGegner">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Wen forderst du heraus?</div>
@@ -848,6 +863,29 @@
         <button class="btn-primary" onclick="sspReset()" style="width:100%">🔄 Nochmal spielen</button>
       </div>
     </div>
+
+    <!-- TIC TAC TOE -->
+    <div id="tttContainer" style="display:none">
+      <button onclick="zurueckZurSpielwahl()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;margin-bottom:10px;padding:0">← Zurück zur Spielwahl</button>
+      <!-- Gegner wählen -->
+      <div id="tttPhaseGegner">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Wen forderst du heraus?</div>
+        <select id="tttGegnerSelect" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-size:14px;margin-bottom:14px"></select>
+        <button class="btn-primary" onclick="tttHerausfordern()" style="width:100%">⭕ Herausfordern</button>
+        <div id="tttWarteText" style="display:none;text-align:center;color:var(--text-muted);font-size:13px;margin-top:12px">⏳ Warte auf Annahme...</div>
+      </div>
+      <!-- Spielbrett -->
+      <div id="tttPhaseBrett" style="display:none">
+        <div id="tttStatus" style="text-align:center;font-size:14px;font-weight:700;color:var(--accent);margin-bottom:12px"></div>
+        <div id="tttBoard" style="display:grid;grid-template-columns:repeat(3,80px);grid-template-rows:repeat(3,80px);gap:6px;justify-content:center;margin-bottom:14px"></div>
+        <div style="text-align:center;font-size:12px;color:var(--text-muted)" id="tttSpielerInfo"></div>
+      </div>
+      <!-- Ergebnis -->
+      <div id="tttPhaseErgebnis" style="display:none;text-align:center">
+        <div id="tttErgebnisText" style="font-size:16px;font-weight:700;padding:16px;border-radius:12px;margin-bottom:14px"></div>
+        <button class="btn-primary" onclick="tttReset()" style="width:100%">🔄 Nochmal spielen</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -862,6 +900,17 @@
     <span class="ssp-btn" onclick="sspAntworten('Papier')">📄</span>
   </div>
   <button onclick="document.getElementById('sspChallengePopup').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 16px;color:var(--text-muted);cursor:pointer;font-size:13px">Ablehnen</button>
+</div>
+
+<!-- TTT CHALLENGE POPUP -->
+<div id="tttChallengePopup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:20px 24px;z-index:99999;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(200,255,0,0.2);text-align:center;">
+  <div style="font-size:28px;margin-bottom:8px">⭕❌</div>
+  <div id="tttChallengeTitel" style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:6px"></div>
+  <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Tic-Tac-Toe – nimmst du an?</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-primary" onclick="tttAnnehmen()" style="flex:1">✅ Annehmen</button>
+    <button onclick="tttAblehnen()" style="flex:1;background:none;border:1px solid var(--border);border-radius:12px;padding:10px;color:var(--text-muted);cursor:pointer;font-size:14px">Ablehnen</button>
+  </div>
 </div>
 
 <!-- LIGHTBOX -->
@@ -915,6 +964,7 @@
       </div>
 
             <div class="input-area">
+              <div id="typingIndicator" style="position:absolute;top:-26px;left:18px;font-size:12px;color:var(--accent);font-style:italic;display:none;background:var(--bg);padding:3px 12px;border-radius:12px 12px 0 0;border:1px solid var(--border);border-bottom:none;">✍️ <span id="typingNames"></span></div>
 
         <div class="upload-preview" id="uploadPreview">
           <div id="uploadThumb"></div>
@@ -968,7 +1018,7 @@
         </div>
 
         <div class="input-box">
-          <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar()">
+          <input type="text" id="msgInput" placeholder="Schreib eine Nachricht..." maxlength="2000" onkeydown="handleKey(event)" oninput="updateChar();sendeTipptStatus()">
           <button class="btn-send" onclick="sendMessage()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -1189,6 +1239,12 @@ function insertSmilieFromChat(code){
   inp.selectionStart=inp.selectionEnd=pos+code.length;
   inp.focus();
   updateChar();
+}
+
+function extractYouTubeId(text){
+  if(!text) return null;
+  const m = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 
 function parseSmilies(text){
@@ -1903,10 +1959,8 @@ async function saveChat(){
 let sspAktuelleGameId = null;
 let sspMeineWahl = null;
 
-function openSpiele(){
-  sspReset();
-  // Gegner-Liste füllen
-  const sel = document.getElementById('sspGegnerSelect');
+function fuelleGegnerListe(selectId){
+  const sel = document.getElementById(selectId);
   sel.innerHTML = '<option value="">-- Gegner wählen --</option>';
   document.querySelectorAll('.online-user-name').forEach(el => {
     const name = el.childNodes[0]?.textContent?.trim().replace(' 💤','') || '';
@@ -1917,7 +1971,32 @@ function openSpiele(){
       sel.appendChild(opt);
     }
   });
+}
+
+function openSpiele(){
+  zurueckZurSpielwahl();
   document.getElementById('spieleOverlay').classList.remove('hidden');
+}
+
+function zeigeSpiel(spiel){
+  document.getElementById('spieleWahl').style.display = 'none';
+  if(spiel === 'ssp'){
+    sspReset();
+    fuelleGegnerListe('sspGegnerSelect');
+    document.getElementById('sspContainer').style.display = 'block';
+    document.getElementById('tttContainer').style.display = 'none';
+  } else {
+    tttReset();
+    fuelleGegnerListe('tttGegnerSelect');
+    document.getElementById('tttContainer').style.display = 'block';
+    document.getElementById('sspContainer').style.display = 'none';
+  }
+}
+
+function zurueckZurSpielwahl(){
+  document.getElementById('spieleWahl').style.display = 'block';
+  document.getElementById('sspContainer').style.display = 'none';
+  document.getElementById('tttContainer').style.display = 'none';
 }
 
 function closeSpiele(e){
@@ -2041,7 +2120,250 @@ function subscribeSSP(){
       // Spiel aus DB löschen
       await sb.from('ssp_games').delete().eq('id', g.id);
     }
+
+    // === TIC TAC TOE Polling ===
+    // Offene TTT-Herausforderung für mich?
+    const {data:tttC} = await sb.from('ttt_games')
+      .select('*')
+      .eq('spieler_o', currentUser.name)
+      .eq('status', 'offen')
+      .limit(1);
+    if(tttC && tttC.length > 0 && tttChallengeId !== tttC[0].id && tttGameId !== tttC[0].id){
+      tttChallengeId = tttC[0].id;
+      document.getElementById('tttChallengeTitel').textContent = tttC[0].spieler_x+' fordert dich heraus!';
+      document.getElementById('tttChallengePopup').style.display = 'block';
+    }
+
+    // Mein laufendes TTT-Spiel aktualisieren
+    if(tttGameId){
+      const {data:tttG} = await sb.from('ttt_games').select('*').eq('id', tttGameId).maybeSingle();
+      if(tttG){
+        // Herausforderer: Spiel wurde angenommen - Brett zeigen
+        if(tttG.status === 'laufend' && document.getElementById('tttPhaseBrett').style.display === 'none' && document.getElementById('tttPhaseErgebnis').style.display === 'none'){
+          document.getElementById('tttPhaseGegner').style.display = 'none';
+          document.getElementById('tttPhaseBrett').style.display = 'block';
+          document.getElementById('tttWarteText').style.display = 'none';
+        }
+        // Board aktualisieren wenn sich was geändert hat
+        if(tttG.status === 'laufend' && tttG.board !== tttLetztesBoard){
+          tttLetztesBoard = tttG.board;
+          tttZeichneBoard(tttG);
+        }
+        // Spiel fertig?
+        if(tttG.status === 'fertig'){
+          tttZeichneBoard(tttG);
+          tttZeigeErgebnis(tttG);
+          const gid = tttGameId;
+          tttGameId = null;
+          setTimeout(()=>sb.from('ttt_games').delete().eq('id', gid), 5000);
+        }
+      }
+    }
   }, 3000);
+}
+
+// ===== SCHREIBT GERADE... =====
+let typingTimeout = null;
+let lastTypingSent = 0;
+
+function getMeinePresence(typing){
+  return {
+    name: currentUser.name,
+    avatar: currentUser.photoUrl ? '📷' : (currentUser.avatar||'👤'),
+    photoUrl: currentUser.photoUrl||null,
+    color: currentUser.colorIndex,
+    isGuest: currentUser.isGuest,
+    isAdmin: currentUser.isAdmin||false,
+    room: currentRoom||'hauptchat',
+    typing: !!typing,
+    online_at: new Date().toISOString()
+  };
+}
+
+function sendeTipptStatus(){
+  if(!subscription || !currentUser) return;
+  const jetzt = Date.now();
+  // Max alle 2 Sekunden senden
+  if(jetzt - lastTypingSent > 2000){
+    lastTypingSent = jetzt;
+    subscription.track(getMeinePresence(true));
+  }
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(()=>{
+    if(subscription && currentUser) subscription.track(getMeinePresence(false));
+  }, 3000);
+}
+
+function zeigeTippende(users){
+  const tippende = users.filter(u =>
+    u.typing &&
+    u.name !== currentUser.name &&
+    (u.room||'hauptchat') === (currentRoom||'hauptchat')
+  ).map(u => u.name);
+  const el = document.getElementById('typingIndicator');
+  const namesEl = document.getElementById('typingNames');
+  if(!el || !namesEl) return;
+  if(tippende.length === 0){
+    el.style.display = 'none';
+  } else if(tippende.length === 1){
+    namesEl.textContent = tippende[0]+' schreibt gerade...';
+    el.style.display = 'block';
+  } else if(tippende.length === 2){
+    namesEl.textContent = tippende[0]+' und '+tippende[1]+' schreiben gerade...';
+    el.style.display = 'block';
+  } else {
+    namesEl.textContent = tippende.length+' Personen schreiben gerade...';
+    el.style.display = 'block';
+  }
+}
+
+// ===== TIC TAC TOE =====
+let tttGameId = null;
+let tttMeinSymbol = null; // 'X' oder 'O'
+let tttLetztesBoard = null;
+let tttChallengeId = null;
+
+function tttReset(){
+  tttGameId = null;
+  tttMeinSymbol = null;
+  tttLetztesBoard = null;
+  document.getElementById('tttPhaseGegner').style.display = 'block';
+  document.getElementById('tttPhaseBrett').style.display = 'none';
+  document.getElementById('tttPhaseErgebnis').style.display = 'none';
+  document.getElementById('tttWarteText').style.display = 'none';
+}
+
+async function tttHerausfordern(){
+  const gegner = document.getElementById('tttGegnerSelect').value;
+  if(!gegner){ showChatInfo('❌ Bitte erst einen Gegner wählen!'); return; }
+  const {data, error} = await sb.from('ttt_games').insert({
+    spieler_x: currentUser.name,
+    spieler_o: gegner,
+    am_zug: currentUser.name,
+    board: '---------',
+    status: 'offen'
+  }).select().single();
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  tttGameId = data.id;
+  tttMeinSymbol = 'X';
+  document.getElementById('tttWarteText').style.display = 'block';
+}
+
+async function tttAnnehmen(){
+  document.getElementById('tttChallengePopup').style.display = 'none';
+  if(!tttChallengeId) return;
+  const {data, error} = await sb.from('ttt_games')
+    .update({status:'laufend'})
+    .eq('id', tttChallengeId)
+    .select().single();
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  tttGameId = tttChallengeId;
+  tttChallengeId = null;
+  tttMeinSymbol = 'O';
+  // Spiel öffnen
+  document.getElementById('spieleOverlay').classList.remove('hidden');
+  document.getElementById('spieleWahl').style.display = 'none';
+  document.getElementById('sspContainer').style.display = 'none';
+  document.getElementById('tttContainer').style.display = 'block';
+  document.getElementById('tttPhaseGegner').style.display = 'none';
+  document.getElementById('tttPhaseBrett').style.display = 'block';
+  tttZeichneBoard(data);
+}
+
+async function tttAblehnen(){
+  document.getElementById('tttChallengePopup').style.display = 'none';
+  if(tttChallengeId){
+    await sb.from('ttt_games').delete().eq('id', tttChallengeId);
+    tttChallengeId = null;
+  }
+}
+
+function tttZeichneBoard(game){
+  const board = game.board;
+  const container = document.getElementById('tttBoard');
+  container.innerHTML = '';
+  const binIchDran = game.am_zug === currentUser.name;
+  const symbole = {X:'❌', O:'⭕', '-':''};
+
+  for(let i=0; i<9; i++){
+    const cell = document.createElement('div');
+    const wert = board[i];
+    cell.className = 'ttt-cell' + (wert !== '-' ? ' taken' : '');
+    cell.textContent = symbole[wert];
+    if(wert === '-' && binIchDran && game.status === 'laufend'){
+      cell.onclick = () => tttZug(i);
+    }
+    container.appendChild(cell);
+  }
+
+  const status = document.getElementById('tttStatus');
+  if(game.status === 'laufend'){
+    status.textContent = binIchDran ? '🟢 Du bist dran!' : '⏳ '+game.am_zug+' ist dran...';
+  }
+  const gegnerName = currentUser.name === game.spieler_x ? game.spieler_o : game.spieler_x;
+  document.getElementById('tttSpielerInfo').textContent = 'Du bist '+(tttMeinSymbol==='X'?'❌':'⭕')+' – Gegner: '+gegnerName;
+}
+
+async function tttZug(pos){
+  if(!tttGameId) return;
+  // Aktuelles Spiel laden
+  const {data: game} = await sb.from('ttt_games').select('*').eq('id', tttGameId).single();
+  if(!game || game.status !== 'laufend' || game.am_zug !== currentUser.name) return;
+  if(game.board[pos] !== '-') return;
+
+  // Zug setzen
+  const neuesBoard = game.board.substring(0,pos) + tttMeinSymbol + game.board.substring(pos+1);
+  const gegnerName = currentUser.name === game.spieler_x ? game.spieler_o : game.spieler_x;
+
+  // Gewinn prüfen
+  const gewinner = tttPruefeGewinn(neuesBoard);
+  let update = {board: neuesBoard, am_zug: gegnerName};
+  if(gewinner){
+    update.status = 'fertig';
+    update.gewinner = gewinner === 'unentschieden' ? 'unentschieden' : currentUser.name;
+  }
+
+  const {data: updated, error} = await sb.from('ttt_games').update(update).eq('id', tttGameId).select().single();
+  if(error){ showChatInfo('❌ Fehler: '+error.message); return; }
+  tttLetztesBoard = updated.board;
+  tttZeichneBoard(updated);
+  // Ergebnis-Anzeige übernimmt das Polling (damit nichts doppelt kommt)
+}
+
+function tttPruefeGewinn(b){
+  const linien = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,c,d] of linien){
+    if(b[a] !== '-' && b[a] === b[c] && b[c] === b[d]) return b[a];
+  }
+  if(!b.includes('-')) return 'unentschieden';
+  return null;
+}
+
+function tttZeigeErgebnis(game){
+  const el = document.getElementById('tttErgebnisText');
+  let text = '';
+  let style = '';
+  if(game.gewinner === 'unentschieden'){
+    text = '🤝 Unentschieden!';
+    style = 'background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);color:var(--accent);';
+  } else if(game.gewinner === currentUser.name){
+    text = '🏆 Du gewinnst!';
+    style = 'background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#22c55e;';
+  } else {
+    text = '😅 '+game.gewinner+' gewinnt!';
+    style = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;';
+  }
+  el.style.cssText = style;
+  el.innerHTML = text;
+  document.getElementById('tttPhaseBrett').style.display = 'none';
+  document.getElementById('tttPhaseErgebnis').style.display = 'block';
+  document.getElementById('tttPhaseGegner').style.display = 'none';
+
+  // Im Chat posten (nur der Gewinner/Zugmacher postet um Doppelungen zu vermeiden)
+  if(game.am_zug !== currentUser.name){
+    const ergebnis = game.gewinner === 'unentschieden' ? '🤝 Unentschieden!' : '🏆 '+game.gewinner+' gewinnt!';
+    sendSystemMsg('⭕ Tic-Tac-Toe: '+game.spieler_x+' (❌) vs '+game.spieler_o+' (⭕) → '+ergebnis);
+  }
 }
 
 function openHilfe(){ document.getElementById('hilfeOverlay').classList.remove('hidden'); }
@@ -2260,6 +2582,15 @@ function renderMsg(msg){
       ?`<video src="${msg.media_url}" controls></video>`
       :`<img src="${msg.media_url}" onclick="openLB('${msg.media_url}')" alt="Bild">`;
   }
+  // YouTube-Videos direkt einbetten
+  if(msg.content){
+    const ytId = extractYouTubeId(msg.content);
+    if(ytId){
+      const isShort = msg.content.includes('/shorts/');
+      const dims = isShort ? 'width="240" height="426"' : 'width="300" height="169"';
+      bubbleContent += `<iframe ${dims} src="https://www.youtube-nocookie.com/embed/${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:10px;margin-top:6px;display:block;max-width:100%"></iframe>`;
+    }
+  }
 
   // Bubble style for own messages
   let bubbleStyle='';
@@ -2447,6 +2778,7 @@ function subscribeMessages(){
     const state=channel.presenceState();
     const users=Object.values(state).flat();
     renderOnlineUsers(users);
+    zeigeTippende(users);
   });
 
   // Neue Nachrichten
