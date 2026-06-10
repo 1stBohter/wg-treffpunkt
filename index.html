@@ -2194,28 +2194,49 @@ function sendeTipptStatus(){
   }, 3000);
 }
 
+// Wer tippt gerade: name -> Zeitstempel der letzten Tipp-Meldung
+let tippendeUser = {};
+
 function zeigeTippende(users){
-  const tippende = users.filter(u =>
-    u.typing &&
-    u.name !== currentUser.name &&
-    (u.room||'hauptchat') === (currentRoom||'hauptchat')
-  ).map(u => u.name);
+  const jetzt = Date.now();
+  users.forEach(u => {
+    if(!u.name || u.name === currentUser.name) return;
+    if((u.room||'hauptchat') !== (currentRoom||'hauptchat')) return;
+    if(u.typing){
+      tippendeUser[u.name] = jetzt;
+    } else {
+      delete tippendeUser[u.name];
+    }
+  });
+  aktualisiereTippAnzeige();
+}
+
+function aktualisiereTippAnzeige(){
+  const jetzt = Date.now();
+  // Failsafe: Einträge älter als 4 Sekunden automatisch entfernen
+  Object.keys(tippendeUser).forEach(name => {
+    if(jetzt - tippendeUser[name] > 4000) delete tippendeUser[name];
+  });
+  const namen = Object.keys(tippendeUser);
   const el = document.getElementById('typingIndicator');
   const namesEl = document.getElementById('typingNames');
   if(!el || !namesEl) return;
-  if(tippende.length === 0){
+  if(namen.length === 0){
     el.style.display = 'none';
-  } else if(tippende.length === 1){
-    namesEl.textContent = tippende[0]+' schreibt gerade...';
+  } else if(namen.length === 1){
+    namesEl.textContent = namen[0]+' schreibt gerade...';
     el.style.display = 'block';
-  } else if(tippende.length === 2){
-    namesEl.textContent = tippende[0]+' und '+tippende[1]+' schreiben gerade...';
+  } else if(namen.length === 2){
+    namesEl.textContent = namen[0]+' und '+namen[1]+' schreiben gerade...';
     el.style.display = 'block';
   } else {
-    namesEl.textContent = tippende.length+' Personen schreiben gerade...';
+    namesEl.textContent = namen.length+' Personen schreiben gerade...';
     el.style.display = 'block';
   }
 }
+
+// Anzeige läuft auch ohne neue Presence-Events ab (Failsafe-Uhr)
+setInterval(aktualisiereTippAnzeige, 1500);
 
 // ===== TIC TAC TOE =====
 let tttGameId = null;
@@ -2973,6 +2994,10 @@ function toggleWhisperPicker(){
 async function sendMessage(){
   const input=document.getElementById('msgInput');
   const content=input.value.trim();
+  // Tipp-Anzeige sofort beenden
+  clearTimeout(typingTimeout);
+  lastTypingSent = 0;
+  if(subscription && currentUser) subscription.track(getMeinePresence(false));
   // Admin-Befehle abfangen
   if(content.startsWith('/')){
     const handled = await handleCommand(content);
