@@ -989,6 +989,7 @@
           <button class="toolbar-btn" onclick="openVoteModal()">🗳️ <span>Abstimmung</span></button>
           <button class="toolbar-btn" onclick="saveChat()">💾 <span>Chat speichern</span></button>
           <button class="toolbar-btn" onclick="openSpiele()">✂️ <span>Spiele</span></button>
+          <button class="toolbar-btn" onclick="manuellerReconnect()" title="Verbindung neu aufbauen">🔄 <span>Reconnect</span></button>
           <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
         </div>
 
@@ -3040,6 +3041,23 @@ async function sendMessage(){
     if(el){ area.appendChild(el); area.scrollTop=area.scrollHeight; }
   }
   if(error) console.error('Send:',error);
+}
+
+async function manuellerReconnect(){
+  showChatInfo('🔄 Verbindung wird neu aufgebaut...');
+  try {
+    // Realtime-Verbindung komplett neu aufbauen
+    if(subscription){
+      try { await subscription.unsubscribe(); } catch(e){}
+    }
+    // Fotos + Nachrichten frisch laden, dann neu verbinden
+    await loadAllPhotos();
+    await loadMessages();
+    subscribeMessages();
+    setTimeout(()=>showChatInfo('✅ Verbindung wiederhergestellt!'), 800);
+  } catch(e){
+    showChatInfo('❌ Fehler beim Reconnect - bitte Seite neu laden (Strg+Shift+R)');
+  }
 }
 
 function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
