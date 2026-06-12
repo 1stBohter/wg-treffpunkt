@@ -2849,6 +2849,8 @@ function subscribeMessages(){
     }
     // Nur Nachrichten des aktuellen Raums anzeigen
     if((msg.room||'hauptchat') !== currentRoom) return;
+    // Duplikat-Schutz: Nachricht schon angezeigt? (z.B. eigene, sofort gerenderte)
+    if(msg.id && document.querySelector('[data-msg-id="'+msg.id+'"]')) return;
     const el=renderMsg(msg);
     if(!el) return;
     document.getElementById('welcomeMsg')?.remove();
@@ -3027,14 +3029,17 @@ async function sendMessage(){
     room: currentRoom,
   };
   if(whisperTarget) cancelWhisper();
-  const {error}=await sb.from('messages').insert(payload);
-  if(error){
-    console.error('Send:',error);
-    const area=document.getElementById('messagesArea');
-    document.getElementById('welcomeMsg')?.remove();
-    const el=renderMsg({...payload,created_at:new Date().toISOString()});
+  const {data:gespeichert, error}=await sb.from('messages').insert(payload).select().single();
+  // Eigene Nachricht SOFORT anzeigen - nicht auf Realtime warten!
+  const area=document.getElementById('messagesArea');
+  document.getElementById('welcomeMsg')?.remove();
+  const msgZumRendern = gespeichert || {...payload, created_at:new Date().toISOString()};
+  // Nur anzeigen wenn noch nicht da (Realtime könnte schneller gewesen sein)
+  if(!gespeichert || !document.querySelector('[data-msg-id="'+gespeichert.id+'"]')){
+    const el=renderMsg(msgZumRendern);
     if(el){ area.appendChild(el); area.scrollTop=area.scrollHeight; }
   }
+  if(error) console.error('Send:',error);
 }
 
 function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
