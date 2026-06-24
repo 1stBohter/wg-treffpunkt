@@ -920,6 +920,10 @@
 
 <!-- APP -->
 <div id="app">
+  <div id="connWarnBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:linear-gradient(90deg,#dc2626,#b91c1c);color:#fff;text-align:center;padding:10px 16px;font-size:14px;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,0.4);">
+    <span id="connWarnText">⚠️ Verbindung verloren – stelle wieder her...</span>
+    <button onclick="manuellerReconnect()" style="margin-left:12px;background:#fff;color:#dc2626;border:none;border-radius:8px;padding:5px 14px;font-weight:700;cursor:pointer;font-size:13px;">🔄 Jetzt neu verbinden</button>
+  </div>
   <div class="header">
     <div class="header-left">
       <div class="logo">WG-Treffpunkt</div>
@@ -1566,6 +1570,9 @@ async function cleanupMyMedia(){
 
 async function logout(){
   stopInactivityTimer();
+  clearInterval(heartbeatTimer);
+  warnungSichtbar = false;
+  const _b = document.getElementById('connWarnBanner'); if(_b) _b.style.display='none';
   if(currentUser) await cleanupMyMedia();
   if(currentUser) await sendSystemMsg(`👋 ${currentUser.name} verlässt den Chat`);
   if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
@@ -2426,6 +2433,7 @@ function startApp(){
   subscribePinboard();
   subscribeGagged();
   subscribeSSP();
+  startHeartbeat();
   // Links laden
   loadLinks();
   // Admin-Button anzeigen
@@ -2797,11 +2805,14 @@ function subscribeMessages(){
   
   // Presence für Online-User
   channel.on('presence',{event:'sync'},()=>{
+    lebenszeichen();
     const state=channel.presenceState();
     const users=Object.values(state).flat();
     renderOnlineUsers(users);
     zeigeTippende(users);
   });
+  channel.on('presence',{event:'join'},()=>lebenszeichen());
+  channel.on('presence',{event:'leave'},()=>lebenszeichen());
 
   // Neue Nachrichten
   channel.on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},(payload)=>{
@@ -2840,6 +2851,7 @@ function subscribeMessages(){
     }
   });
   channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async(payload)=>{
+    lebenszeichen();
     const area=document.getElementById('messagesArea');
     let msg=payload.new;
     // SSP verarbeiten
@@ -2869,11 +2881,13 @@ function subscribeMessages(){
 
   channel.subscribe(async(status)=>{
     if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
-      console.log('Verbindung unterbrochen, reconnect in 3s...');
-      setTimeout(()=>{ if(currentUser) subscribeMessages(); }, 3000);
+      console.log('Verbindung unterbrochen ('+status+'), reconnect...');
+      verbindungVerloren();
       return;
     }
     if(status==='SUBSCRIBED'){
+      // Verbindung steht wieder - Warnung weg, Heartbeat zuruecksetzen
+      verbindungOk();
       await channel.track({
         name: currentUser.name,
         avatar: currentUser.avatar||'👤',
@@ -2901,8 +2915,83 @@ function subscribeMessages(){
       },1500);
     }
   });
-  
+
   subscription = channel;
+}
+
+// ===== VERBINDUNGS-WÄCHTER (HEARTBEAT) =====
+let letztesLebenszeichen = Date.now();
+let heartbeatTimer = null;
+let reconnectLaeuft = false;
+let warnungSichtbar = false;
+
+// Wird bei jedem empfangenen Realtime-Event aufgerufen
+function lebenszeichen(){
+  letztesLebenszeichen = Date.now();
+  if(warnungSichtbar) verbindungOk();
+}
+
+function verbindungOk(){
+  letztesLebenszeichen = Date.now();
+  reconnectLaeuft = false;
+  if(warnungSichtbar){
+    warnungSichtbar = false;
+    const b = document.getElementById('connWarnBanner');
+    if(b) b.style.display = 'none';
+  }
+}
+
+function verbindungVerloren(){
+  // Nur reconnecten wenn nicht eh schon laeuft
+  if(reconnectLaeuft) return;
+  reconnectLaeuft = true;
+  // Sauberer Neuaufbau
+  setTimeout(()=>{
+    if(!currentUser){ reconnectLaeuft=false; return; }
+    try { if(subscription) subscription.unsubscribe(); } catch(e){}
+    subscribeMessages();
+  }, 2000);
+}
+
+function zeigeVerbindungsWarnung(){
+  if(warnungSichtbar) return;
+  warnungSichtbar = true;
+  const b = document.getElementById('connWarnBanner');
+  if(b) b.style.display = 'block';
+}
+
+function startHeartbeat(){
+  clearInterval(heartbeatTimer);
+  letztesLebenszeichen = Date.now();
+  heartbeatTimer = setInterval(()=>{
+    if(!currentUser) return;
+    const still = Date.now() - letztesLebenszeichen;
+    // Aktiv pruefen ob Channel noch lebt: eigene Presence erneut senden
+    if(subscription && still > 12000){
+      // Seit 12s nichts gehoert - aktiv ein Lebenszeichen senden (Ping)
+      try {
+        subscription.track({
+          name: currentUser.name,
+          avatar: currentUser.avatar||'👤',
+          color: currentUser.colorIndex,
+          isGuest: currentUser.isGuest,
+          isAdmin: currentUser.isAdmin||false,
+          room: currentRoom||'hauptchat',
+          photoUrl: currentUser.photoUrl||null,
+          online_at: new Date().toISOString()
+        });
+      } catch(e){}
+    }
+    // Nach 15s ohne Lebenszeichen: Warnung zeigen
+    if(still > 15000){
+      zeigeVerbindungsWarnung();
+    }
+    // Nach 18s: automatisch neu verbinden
+    if(still > 18000 && !reconnectLaeuft){
+      console.log('Heartbeat: keine Antwort seit '+Math.round(still/1000)+'s - reconnect');
+      verbindungVerloren();
+    }
+  }, 3000);
 }
 
 function renderOnlineUsers(users){
@@ -3045,6 +3134,7 @@ async function sendMessage(){
 
 async function manuellerReconnect(){
   showChatInfo('🔄 Verbindung wird neu aufgebaut...');
+  reconnectLaeuft = true;
   try {
     // Realtime-Verbindung komplett neu aufbauen
     if(subscription){
@@ -3054,8 +3144,9 @@ async function manuellerReconnect(){
     await loadAllPhotos();
     await loadMessages();
     subscribeMessages();
-    setTimeout(()=>showChatInfo('✅ Verbindung wiederhergestellt!'), 800);
+    setTimeout(()=>{ verbindungOk(); showChatInfo('✅ Verbindung wiederhergestellt!'); }, 800);
   } catch(e){
+    reconnectLaeuft = false;
     showChatInfo('❌ Fehler beim Reconnect - bitte Seite neu laden (Strg+Shift+R)');
   }
 }
