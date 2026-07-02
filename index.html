@@ -2888,6 +2888,13 @@ function subscribeMessages(){
     if(status==='SUBSCRIBED'){
       // Verbindung steht wieder - Warnung weg, Heartbeat zuruecksetzen
       verbindungOk();
+      // Nach einem Reconnect: verpasste Nachrichten still nachladen
+      // (Fix: vorher blieb der Chat nach einem Abbruch "stumm",
+      //  weil zwischenzeitliche Nachrichten nie nachgeholt wurden)
+      if(nachReconnectNachladen){
+        nachReconnectNachladen = false;
+        verpassteNachrichtenNachladen();
+      }
       await channel.track({
         name: currentUser.name,
         avatar: currentUser.avatar||'👤',
@@ -2919,21 +2926,31 @@ function subscribeMessages(){
   subscription = channel;
 }
 
-// ===== VERBINDUNGS-WÄCHTER (HEARTBEAT) =====
+// ===== VERBINDUNGS-WÄCHTER (HEARTBEAT) v2 =====
+// NEU: Prüft AKTIV ob die Verbindung lebt (Ping mit Server-Antwort),
+// statt nur auf "Stille" zu warten. Stille ist in einem ruhigen Chat
+// normal und KEIN Verbindungsverlust -> keine Fehlalarme mehr.
 let letztesLebenszeichen = Date.now();
 let heartbeatTimer = null;
 let reconnectLaeuft = false;
 let warnungSichtbar = false;
+let fehlgeschlagenePings = 0;
+let pingLaeuft = false;
+let nachReconnectNachladen = false;
+let reconnectWatchdog = null;
 
 // Wird bei jedem empfangenen Realtime-Event aufgerufen
 function lebenszeichen(){
   letztesLebenszeichen = Date.now();
+  fehlgeschlagenePings = 0;
   if(warnungSichtbar) verbindungOk();
 }
 
 function verbindungOk(){
   letztesLebenszeichen = Date.now();
+  fehlgeschlagenePings = 0;
   reconnectLaeuft = false;
+  clearTimeout(reconnectWatchdog);
   if(warnungSichtbar){
     warnungSichtbar = false;
     const b = document.getElementById('connWarnBanner');
@@ -2941,16 +2958,43 @@ function verbindungOk(){
   }
 }
 
+// Aktiver Ping: eigene Presence senden und auf die ANTWORT des Servers warten.
+// Nur 'ok' bedeutet: Verbindung lebt wirklich. Alles andere = Problem.
+async function pingVerbindung(){
+  if(!subscription || !currentUser) return false;
+  try{
+    // Falls gerade getippt wird, den Tipp-Status nicht versehentlich löschen
+    const tipptGerade = (Date.now() - lastTypingSent) < 3000;
+    const antwort = await subscription.track(getMeinePresence(tipptGerade));
+    return antwort === 'ok';
+  }catch(e){
+    return false;
+  }
+}
+
 function verbindungVerloren(){
   // Nur reconnecten wenn nicht eh schon laeuft
   if(reconnectLaeuft) return;
+  if(!currentUser) return;
   reconnectLaeuft = true;
+  nachReconnectNachladen = true; // nach dem Neuaufbau Verpasstes nachladen
   // Sauberer Neuaufbau
   setTimeout(()=>{
     if(!currentUser){ reconnectLaeuft=false; return; }
     try { if(subscription) subscription.unsubscribe(); } catch(e){}
     subscribeMessages();
-  }, 2000);
+    // WICHTIG (Fix "Taubheit"): Falls der Neuaufbau selbst hängen bleibt,
+    // Sperre nach 12s wieder freigeben und erneut versuchen.
+    // Vorher konnte sich der Reconnect dauerhaft selbst blockieren.
+    clearTimeout(reconnectWatchdog);
+    reconnectWatchdog = setTimeout(()=>{
+      if(reconnectLaeuft && currentUser){
+        console.log('Heartbeat: Reconnect hing fest - neuer Versuch');
+        reconnectLaeuft = false;
+        verbindungVerloren();
+      }
+    }, 12000);
+  }, 1500);
 }
 
 function zeigeVerbindungsWarnung(){
@@ -2960,39 +3004,89 @@ function zeigeVerbindungsWarnung(){
   if(b) b.style.display = 'block';
 }
 
+// Verpasste Nachrichten still nachladen - OHNE den Chat zu leeren.
+// Es werden nur Nachrichten ergänzt, die noch nicht angezeigt sind.
+async function verpassteNachrichtenNachladen(){
+  if(!currentUser) return;
+  try{
+    const {data} = await sb.from('messages').select('*')
+      .gte('created_at', SESSION_START)
+      .neq('media_type','vote')
+      .eq('room', currentRoom||'hauptchat')
+      .order('created_at',{ascending:true}).limit(200);
+    if(!data || !data.length) return;
+    const area = document.getElementById('messagesArea');
+    if(!area) return;
+    let neu = 0;
+    data.forEach(m=>{
+      if(m.id && document.querySelector('[data-msg-id="'+m.id+'"]')) return;
+      const el = renderMsg(m);
+      if(el){ area.appendChild(el); neu++; }
+    });
+    if(neu > 0){
+      document.getElementById('welcomeMsg')?.remove();
+      area.scrollTop = area.scrollHeight;
+    }
+  }catch(e){}
+}
+
 function startHeartbeat(){
   clearInterval(heartbeatTimer);
   letztesLebenszeichen = Date.now();
-  heartbeatTimer = setInterval(()=>{
-    if(!currentUser) return;
-    const still = Date.now() - letztesLebenszeichen;
-    // Aktiv pruefen ob Channel noch lebt: eigene Presence erneut senden
-    if(subscription && still > 12000){
-      // Seit 12s nichts gehoert - aktiv ein Lebenszeichen senden (Ping)
-      try {
-        subscription.track({
-          name: currentUser.name,
-          avatar: currentUser.avatar||'👤',
-          color: currentUser.colorIndex,
-          isGuest: currentUser.isGuest,
-          isAdmin: currentUser.isAdmin||false,
-          room: currentRoom||'hauptchat',
-          photoUrl: currentUser.photoUrl||null,
-          online_at: new Date().toISOString()
-        });
-      } catch(e){}
+  fehlgeschlagenePings = 0;
+  // Alle 20 Sekunden EIN aktiver Ping.
+  // (Vorher: alle 3s bei Stille - das hat den Server unnötig geflutet
+  //  und konnte selbst Abbrüche mitverursachen.)
+  heartbeatTimer = setInterval(async ()=>{
+    if(!currentUser || !subscription) return;
+    if(reconnectLaeuft) return;   // Neuaufbau läuft bereits
+    if(pingLaeuft) return;        // vorheriger Ping noch unterwegs
+    if(document.hidden) return;   // Tab im Hintergrund: Browser drosselt eh - Prüfung beim Zurückkommen
+    pingLaeuft = true;
+    const ok = await pingVerbindung();
+    pingLaeuft = false;
+    if(ok){
+      verbindungOk();
+    } else {
+      fehlgeschlagenePings++;
+      console.log('Heartbeat: Ping fehlgeschlagen ('+fehlgeschlagenePings+'x)');
+      // Erst beim ZWEITEN Fehlschlag in Folge reagieren -
+      // ein einzelner kann ein harmloser Mini-Aussetzer sein.
+      if(fehlgeschlagenePings >= 2){
+        zeigeVerbindungsWarnung();
+        verbindungVerloren();
+      }
     }
-    // Nach 15s ohne Lebenszeichen: Warnung zeigen
-    if(still > 15000){
-      zeigeVerbindungsWarnung();
-    }
-    // Nach 18s: automatisch neu verbinden
-    if(still > 18000 && !reconnectLaeuft){
-      console.log('Heartbeat: keine Antwort seit '+Math.round(still/1000)+'s - reconnect');
-      verbindungVerloren();
-    }
-  }, 3000);
+  }, 20000);
 }
+
+// Tab kommt aus dem Hintergrund zurück: sofort leise prüfen + Verpasstes nachladen.
+// (Browser legen Hintergrund-Tabs schlafen - das war vorher eine häufige
+//  Quelle für die rote Warnleiste direkt nach dem Tab-Wechsel.)
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.hidden || !currentUser || !subscription) return;
+  if(reconnectLaeuft || pingLaeuft) return;
+  pingLaeuft = true;
+  const ok = await pingVerbindung();
+  pingLaeuft = false;
+  if(ok){
+    verbindungOk();
+    verpassteNachrichtenNachladen();
+  } else {
+    fehlgeschlagenePings = 2;
+    zeigeVerbindungsWarnung();
+    verbindungVerloren();
+  }
+});
+
+// Internet war kurz weg und ist wieder da (z.B. WLAN gewechselt): sofort neu verbinden
+window.addEventListener('online', ()=>{
+  if(!currentUser) return;
+  console.log('Netzwerk wieder da - Verbindung wird neu aufgebaut');
+  clearTimeout(reconnectWatchdog);
+  reconnectLaeuft = false;
+  verbindungVerloren();
+});
 
 function renderOnlineUsers(users){
   const seen = new Set();
