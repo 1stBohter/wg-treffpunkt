@@ -2793,6 +2793,7 @@ async function loadMessages(){
   if(data&&data.length>0){
     document.getElementById('welcomeMsg')?.remove();
     data.forEach(m=>{
+      if(m.created_at) merkeMsgZeit(m.created_at);
       const el=renderMsg(m);
       if(el) area.appendChild(el);
     });
@@ -2854,6 +2855,7 @@ function subscribeMessages(){
     lebenszeichen();
     const area=document.getElementById('messagesArea');
     let msg=payload.new;
+    if(msg.created_at) merkeMsgZeit(msg.created_at);
     // SSP verarbeiten
     // Sicherheitshalber: bei vote immer frisch aus DB laden
     if(msg.media_type==='vote' || !msg.content){
@@ -2938,6 +2940,7 @@ let fehlgeschlagenePings = 0;
 let pingLaeuft = false;
 let nachReconnectNachladen = false;
 let reconnectWatchdog = null;
+let nachrichtenSyncTimer = null;
 
 // Wird bei jedem empfangenen Realtime-Event aufgerufen
 function lebenszeichen(){
@@ -3004,36 +3007,97 @@ function zeigeVerbindungsWarnung(){
   if(b) b.style.display = 'block';
 }
 
-// Verpasste Nachrichten still nachladen - OHNE den Chat zu leeren.
-// Es werden nur Nachrichten ergänzt, die noch nicht angezeigt sind.
-async function verpassteNachrichtenNachladen(){
-  if(!currentUser) return;
+// ===== LÜCKEN-FÜLLER (NACHRICHTEN-SYNC) =====
+// Problem: Der Nachrichten-Kanal von Supabase kann still kaputtgehen,
+// während der Online-Kanal (Presence) weiterläuft. Der Ping meldet dann
+// "alles ok", aber Nachrichten anderer kommen nicht mehr an.
+// Lösung: Alle 10 Sekunden leise in der Datenbank nachschauen und
+// fehlende Nachrichten an der richtigen Stelle einfügen.
+let letzteBekannteMsgZeit = null;   // Zeitstempel der neuesten bekannten Nachricht (Server-Zeit)
+let syncLaeuft = false;
+let echtVerpassteSyncs = 0;         // zählt Sync-Runden mit wirklich verpassten Nachrichten
+
+function merkeMsgZeit(t){
+  if(t && (!letzteBekannteMsgZeit || t > letzteBekannteMsgZeit)) letzteBekannteMsgZeit = t;
+}
+
+async function nachrichtenSync(){
+  if(!currentUser || syncLaeuft) return;
+  syncLaeuft = true;
   try{
-    const {data} = await sb.from('messages').select('*')
-      .gte('created_at', SESSION_START)
+    // Ab wann suchen? Ab der neuesten bekannten Nachricht, mit 90s Sicherheitspuffer
+    let ab = SESSION_START;
+    if(letzteBekannteMsgZeit){
+      const mitPuffer = new Date(new Date(letzteBekannteMsgZeit).getTime() - 90000).toISOString();
+      if(mitPuffer > SESSION_START) ab = mitPuffer;
+    }
+    const {data,error} = await sb.from('messages').select('*')
+      .gte('created_at', ab)
       .neq('media_type','vote')
       .eq('room', currentRoom||'hauptchat')
-      .order('created_at',{ascending:true}).limit(200);
-    if(!data || !data.length) return;
+      .order('created_at',{ascending:true}).limit(100);
+    if(error || !data){ syncLaeuft = false; return; }
     const area = document.getElementById('messagesArea');
-    if(!area) return;
-    let neu = 0;
+    if(!area){ syncLaeuft = false; return; }
+    let neu = 0, echtVerpasst = 0;
     data.forEach(m=>{
+      merkeMsgZeit(m.created_at);
       if(m.id && document.querySelector('[data-msg-id="'+m.id+'"]')) return;
       const el = renderMsg(m);
-      if(el){ area.appendChild(el); neu++; }
+      if(!el) return;
+      // An der richtigen Stelle einfügen (nach Nachrichten-ID sortiert),
+      // damit nachgeholte Nachrichten nicht unten "falsch" landen
+      let eingefuegt = false;
+      const vorhandene = area.querySelectorAll('[data-msg-id]');
+      for(const v of vorhandene){
+        if(Number(v.getAttribute('data-msg-id')) > Number(m.id)){
+          area.insertBefore(el, v);
+          eingefuegt = true;
+          break;
+        }
+      }
+      if(!eingefuegt) area.appendChild(el);
+      neu++;
+      // Nachricht älter als 20s und trotzdem noch nicht da gewesen?
+      // Dann hat der Echtzeit-Kanal sie WIRKLICH verschlafen (kein Zufalls-Wettrennen).
+      if(Date.now() - new Date(m.created_at).getTime() > 20000) echtVerpasst++;
     });
     if(neu > 0){
       document.getElementById('welcomeMsg')?.remove();
       area.scrollTop = area.scrollHeight;
     }
+    // Selbstheilung: Wenn der Sync ZWEIMAL hintereinander echte Lücken findet,
+    // ist der Echtzeit-Kanal offenbar tot -> leise im Hintergrund neu verbinden
+    // (ohne rote Warnleiste, der Nutzer merkt nichts).
+    if(echtVerpasst > 0){
+      echtVerpassteSyncs++;
+      if(echtVerpassteSyncs >= 2 && !reconnectLaeuft){
+        console.log('Sync: Echtzeit-Kanal verschläft Nachrichten - leiser Neuaufbau');
+        echtVerpassteSyncs = 0;
+        verbindungVerloren();
+      }
+    } else {
+      echtVerpassteSyncs = 0;
+    }
   }catch(e){}
+  syncLaeuft = false;
+}
+
+// Alte Funktion bleibt als Name erhalten (wird nach Reconnect + Tab-Rückkehr gerufen)
+async function verpassteNachrichtenNachladen(){
+  await nachrichtenSync();
 }
 
 function startHeartbeat(){
   clearInterval(heartbeatTimer);
+  clearInterval(nachrichtenSyncTimer);
   letztesLebenszeichen = Date.now();
   fehlgeschlagenePings = 0;
+  // Lücken-Füller: alle 10 Sekunden leise nachschauen ob Nachrichten fehlen
+  nachrichtenSyncTimer = setInterval(()=>{
+    if(!currentUser || document.hidden) return;
+    nachrichtenSync();
+  }, 10000);
   // Alle 20 Sekunden EIN aktiver Ping.
   // (Vorher: alle 3s bei Stille - das hat den Server unnötig geflutet
   //  und konnte selbst Abbrüche mitverursachen.)
