@@ -793,6 +793,7 @@
       <span style="color:var(--accent);font-family:monospace">/away Grund</span> – Status setzen<br>
       <span style="color:var(--accent);font-family:monospace">/back</span> – Zurück<br>
       <span style="color:var(--accent);font-family:monospace">/pm Name Text</span> – Nachricht hinterlassen<br>
+      <span style="color:var(--accent);font-family:monospace">/w Name Text</span> – Flüstern ohne Klicken<br>
       <span style="color:#ef4444;font-family:monospace">/cls</span> – Alle Nachrichten löschen <span style="color:#ef4444">(Superadmin)</span>
     </div>
   </div>
@@ -3152,12 +3153,24 @@ window.addEventListener('online', ()=>{
   verbindungVerloren();
 });
 
+// Merkt sich den letzten Zustand der Online-Liste.
+// Nur wenn sich wirklich etwas ändert, wird neu gezeichnet -> kein Springen mehr.
+let letzteOnlineListeSig = '';
+
 function renderOnlineUsers(users){
   const seen = new Set();
   const unique = users.filter(u => {
     const key = (u.name||'').toLowerCase();
     if(seen.has(key)) return false;
     seen.add(key); return true;
+  });
+  // FESTE Reihenfolge: Superadmins oben, dann Admins, dann alle anderen -
+  // innerhalb der Gruppen alphabetisch. So bleibt jeder an seinem Platz.
+  const rang = u => SUPERADMINS.includes((u.name||'').toLowerCase()) ? 0 : (u.isAdmin ? 1 : 2);
+  unique.sort((a,b)=>{
+    const r = rang(a) - rang(b);
+    if(r !== 0) return r;
+    return (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase(), 'de');
   });
   const badge = document.getElementById('loginOnlineBadge');
   const count = document.getElementById('loginOnlineCount');
@@ -3166,9 +3179,14 @@ function renderOnlineUsers(users){
     badge.style.display = unique.length > 0 ? 'flex' : 'none';
   }
   const myRoom = currentRoom||'hauptchat';
+  // Hat sich überhaupt etwas Sichtbares geändert? (Tippen zählt NICHT dazu)
+  const sig = myRoom + '#' + Object.keys(knebelList).sort().join(',') + '#' +
+    unique.map(u => [u.name, u.room||'hauptchat', u.away?1:0, u.awayReason||'',
+      u.isAdmin?1:0, u.avatar||'', getPhotoFor(u.name)||'', u.color, u.isGuest?1:0].join('|')).join(';');
+  if(sig === letzteOnlineListeSig) return; // nichts geändert -> Liste in Ruhe lassen
+  letzteOnlineListeSig = sig;
   const inRoom = unique.filter(u => (u.room||'hauptchat') === myRoom);
   const others = unique.filter(u => (u.room||'hauptchat') !== myRoom);
-  console.log('FILTER: myRoom='+myRoom+' inRoom='+inRoom.map(u=>u.name)+' others='+others.map(u=>u.name));
   const list=document.getElementById('onlineList');
   list.innerHTML='';
   inRoom.forEach(u=>{
@@ -3401,6 +3419,55 @@ async function handleCommand(content){
     });
     if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
     showChatInfo(`📩 PM an ${targetName} hinterlassen!`);
+    return true;
+  }
+
+  // /w NAME TEXT (auch /flüster) - direkt flüstern ohne Klicken in der Online-Liste
+  if(cmd === '/w' || cmd === '/flüster' || cmd === '/fluester'){
+    const zielName = parts[1];
+    const text = parts.slice(2).join(' ').trim();
+    if(!zielName || !text){
+      showChatInfo('❌ Bitte so eingeben: /w Name Nachricht');
+      return true;
+    }
+    if(window.isGagged){
+      showChatInfo('🔇 Du bist geknebelt und kannst gerade nicht schreiben!');
+      return true;
+    }
+    // Ziel in der Online-Liste suchen (Groß-/Kleinschreibung egal)
+    let echterName = null;
+    try{
+      const state = subscription ? subscription.presenceState() : {};
+      const alle = Object.values(state).flat();
+      const treffer = alle.find(u => (u.name||'').toLowerCase() === zielName.toLowerCase());
+      if(treffer) echterName = treffer.name;
+    }catch(e){}
+    if(!echterName){
+      showChatInfo('❌ "'+zielName+'" ist gerade nicht online. Tipp: /pm '+zielName+' Text hinterlässt eine Nachricht fürs nächste Mal.');
+      return true;
+    }
+    if(echterName.toLowerCase() === currentUser.name.toLowerCase()){
+      showChatInfo('🤭 Du kannst dir nicht selbst zuflüstern!');
+      return true;
+    }
+    const wPayload = {
+      content: text, user_id: currentUser.id, user_name: currentUser.name,
+      is_guest: currentUser.isGuest, color_index: currentUser.isGuest?null:(currentUser.colorIndex??0),
+      avatar: currentUser.avatar||null, photo_url: currentUser.photoUrl||null,
+      media_url: null, media_type: null,
+      whisper_to: echterName, whisper_to_name: echterName,
+      room: currentRoom,
+    };
+    const {data:wGespeichert, error:wError} = await sb.from('messages').insert(wPayload).select().single();
+    if(wError){ showChatInfo('❌ Fehler beim Flüstern: '+wError.message); return true; }
+    if(wGespeichert && wGespeichert.created_at) merkeMsgZeit(wGespeichert.created_at);
+    // Eigene Flüster-Nachricht sofort anzeigen (wie beim normalen Senden)
+    const wArea = document.getElementById('messagesArea');
+    document.getElementById('welcomeMsg')?.remove();
+    if(wGespeichert && !document.querySelector('[data-msg-id="'+wGespeichert.id+'"]')){
+      const wEl = renderMsg(wGespeichert);
+      if(wEl){ wArea.appendChild(wEl); wArea.scrollTop = wArea.scrollHeight; }
+    }
     return true;
   }
 
