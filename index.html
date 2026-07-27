@@ -400,17 +400,23 @@
   .vote-option-btn:hover { border-color:var(--accent2);color:var(--text); }
   .vote-option-btn.voted-a { border-color:#22c55e;background:rgba(34,197,94,0.15);color:#22c55e; }
   .vote-option-btn.voted-b { border-color:#ef4444;background:rgba(239,68,68,0.15);color:#ef4444; }
+  .vote-option-btn.voted-c { border-color:#3b82f6;background:rgba(59,130,246,0.15);color:#3b82f6; }
+  .vote-option-btn.voted-d { border-color:#f59e0b;background:rgba(245,158,11,0.15);color:#f59e0b; }
   .vote-bars { display:flex;flex-direction:column;gap:6px;margin-bottom:10px; }
   .vote-bar-row { display:flex;align-items:center;gap:8px; }
   .vote-bar-label { font-size:12px;font-weight:700;color:var(--text-muted);min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .vote-bar-track { flex:1;background:var(--surface2);border-radius:20px;height:10px;overflow:hidden; }
   .vote-bar-fill-a { height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:20px;transition:width 0.4s ease; }
   .vote-bar-fill-b { height:100%;background:linear-gradient(90deg,#ef4444,#b91c1c);border-radius:20px;transition:width 0.4s ease; }
+  .vote-bar-fill-c { height:100%;background:linear-gradient(90deg,#3b82f6,#1d4ed8);border-radius:20px;transition:width 0.4s ease; }
+  .vote-bar-fill-d { height:100%;background:linear-gradient(90deg,#f59e0b,#b45309);border-radius:20px;transition:width 0.4s ease; }
   .vote-bar-count { font-size:12px;font-weight:700;color:var(--text);min-width:20px;text-align:right; }
   .vote-voters { font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.6; }
   .vote-voters span { display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;margin:2px 2px;font-size:11px; }
   .vote-voters span.vote-a { border-color:#22c55e;color:#22c55e; }
   .vote-voters span.vote-b { border-color:#ef4444;color:#ef4444; }
+  .vote-voters span.vote-c { border-color:#3b82f6;color:#3b82f6; }
+  .vote-voters span.vote-d { border-color:#f59e0b;color:#f59e0b; }
 
   /* PINNWAND */
   .pinboard-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:flex-start;justify-content:center;z-index:300;padding-top:60px;animation:fadeIn 0.2s ease; }
@@ -647,10 +653,14 @@
     <h3>🗳️ Abstimmung erstellen</h3>
     <label>Frage / Thema</label>
     <input type="text" id="voteQuestion" placeholder="z.B. Sollen wir Pizza bestellen?" maxlength="120">
-    <label>Option A (Ja-Seite)</label>
+    <label>Option A</label>
     <input type="text" id="voteOptA" placeholder="z.B. 👍 Dafür" maxlength="40">
-    <label>Option B (Nein-Seite)</label>
+    <label>Option B</label>
     <input type="text" id="voteOptB" placeholder="z.B. 👎 Dagegen" maxlength="40">
+    <label>Option C <span style="font-weight:400;opacity:0.7">(optional)</span></label>
+    <input type="text" id="voteOptC" placeholder="leer lassen wenn nicht gebraucht" maxlength="40">
+    <label>Option D <span style="font-weight:400;opacity:0.7">(optional)</span></label>
+    <input type="text" id="voteOptD" placeholder="leer lassen wenn nicht gebraucht" maxlength="40">
     <div class="vote-btn-row">
       <button class="btn-cancel" onclick="closeVoteModal()">Abbrechen</button>
       <button class="btn-start" onclick="startVote()">🗳️ Abstimmung starten</button>
@@ -3758,16 +3768,24 @@ function closeVoteModal(){
   document.getElementById('voteQuestion').value='';
   document.getElementById('voteOptA').value='';
   document.getElementById('voteOptB').value='';
+  document.getElementById('voteOptC').value='';
+  document.getElementById('voteOptD').value='';
 }
 
 async function startVote(){
   const q=document.getElementById('voteQuestion').value.trim();
   const a=document.getElementById('voteOptA').value.trim()||'👍 Dafür';
   const b=document.getElementById('voteOptB').value.trim()||'👎 Dagegen';
+  // C und D sind OPTIONAL - leer lassen = normale 2er-Abstimmung wie bisher
+  const c=document.getElementById('voteOptC').value.trim();
+  const d=document.getElementById('voteOptD').value.trim();
   if(!q) return;
+  const voteInhalt={type:'vote',question:q,optA:a,optB:b};
+  if(c) voteInhalt.optC=c;
+  if(d) voteInhalt.optD=d;
   // Poll als message speichern
   const {data,error}=await sb.from('messages').insert({
-    content:JSON.stringify({type:'vote',question:q,optA:a,optB:b}),
+    content:JSON.stringify(voteInhalt),
     user_id:currentUser.id, user_name:currentUser.name,
     is_guest:currentUser.isGuest,
     color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
@@ -3802,13 +3820,20 @@ function renderVoteCard(msg, voteData=[]){
   let v;
   try{ v=JSON.parse(msg.content); }catch(e){ return null; }
   if(!v || v.type!=='vote') return null;
-  const votersA=voteData.filter(r=>r.choice==='a').map(r=>r.user_name);
-  const votersB=voteData.filter(r=>r.choice==='b').map(r=>r.user_name);
-  const total=votersA.length+votersB.length||1;
-  const pA=Math.round(votersA.length/total*100);
-  const pB=Math.round(votersB.length/total*100);
-  const myVoteA=votersA.includes(currentUser.name);
-  const myVoteB=votersB.includes(currentUser.name);
+  // Optionen einsammeln - C und D nur wenn sie beim Erstellen ausgefüllt wurden
+  const optionen=[
+    {key:'a', text:v.optA},
+    {key:'b', text:v.optB},
+  ];
+  if(v.optC) optionen.push({key:'c', text:v.optC});
+  if(v.optD) optionen.push({key:'d', text:v.optD});
+  // Stimmen pro Option zählen
+  optionen.forEach(o=>{
+    o.voters=voteData.filter(r=>r.choice===o.key).map(r=>r.user_name);
+    o.meins=o.voters.includes(currentUser.name);
+  });
+  const gesamt=optionen.reduce((s,o)=>s+o.voters.length,0)||1;
+  optionen.forEach(o=>{ o.prozent=Math.round(o.voters.length/gesamt*100); });
 
   const el=document.createElement('div');
   el.className='message';
@@ -3822,24 +3847,18 @@ function renderVoteCard(msg, voteData=[]){
     <div class="vote-card">
       <div class="vote-card-title">${esc(v.question)}</div>
       <div class="vote-options">
-        <button class="vote-option-btn${myVoteA?' voted-a':''}" data-side="a">${esc(v.optA)}</button>
-        <button class="vote-option-btn${myVoteB?' voted-b':''}" data-side="b">${esc(v.optB)}</button>
+        ${optionen.map(o=>`<button class="vote-option-btn${o.meins?' voted-'+o.key:''}" data-side="${o.key}">${esc(o.text)}</button>`).join('')}
       </div>
       <div class="vote-bars">
+        ${optionen.map(o=>`
         <div class="vote-bar-row">
-          <div class="vote-bar-label">${esc(v.optA)}</div>
-          <div class="vote-bar-track"><div class="vote-bar-fill-a" style="width:${pA}%"></div></div>
-          <div class="vote-bar-count">${votersA.length}</div>
-        </div>
-        <div class="vote-bar-row">
-          <div class="vote-bar-label">${esc(v.optB)}</div>
-          <div class="vote-bar-track"><div class="vote-bar-fill-b" style="width:${pB}%"></div></div>
-          <div class="vote-bar-count">${votersB.length}</div>
-        </div>
+          <div class="vote-bar-label">${esc(o.text)}</div>
+          <div class="vote-bar-track"><div class="vote-bar-fill-${o.key}" style="width:${o.prozent}%"></div></div>
+          <div class="vote-bar-count">${o.voters.length}</div>
+        </div>`).join('')}
       </div>
       <div class="vote-voters">
-        ${votersA.map(n=>`<span class="vote-a">${esc(n)}</span>`).join('')}
-        ${votersB.map(n=>`<span class="vote-b">${esc(n)}</span>`).join('')}
+        ${optionen.map(o=>o.voters.map(n=>`<span class="vote-${o.key}">${esc(n)}</span>`).join('')).join('')}
       </div>
     </div>
     <div class="msg-time">${timeStr(msg.created_at)} · gestartet von ${esc(msg.user_name)}</div>`;
