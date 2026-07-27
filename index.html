@@ -43,6 +43,9 @@
     overflow:hidden;
   }
   .overlay.hidden { display:none; }
+  /* Hilfe-Fenster darf scrollen - die Befehlsliste ist länger als der Bildschirm */
+  #hilfeOverlay { overflow-y:auto; align-items:flex-start; padding:24px 0; }
+  #hilfeOverlay .modal { max-height:none; }
 
   /* RESIDENTS PANEL (links) */
   .residents-panel {
@@ -707,6 +710,30 @@
         <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🤫 <strong>Flüstern</strong> = privat schreiben</div>
         <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">👥 Rechts = wer ist <strong>online</strong></div>
         <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px">🚪 <strong>Abmelden</strong> zum Verlassen</div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px">Befehle – einfach ins Textfeld tippen</div>
+      <div style="font-size:12px;color:var(--text-muted);margin:-2px 0 2px">Für alle:</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.9">
+        <div><code style="color:var(--accent);font-family:monospace">/w Name Text</code> – jemandem privat zuflüstern <span style="opacity:0.65">(muss online sein)</span></div>
+        <div><code style="color:var(--accent);font-family:monospace">/pm Name Text</code> – Nachricht hinterlassen <span style="opacity:0.65">(sieht sie beim nächsten Login)</span></div>
+        <div><code style="color:var(--accent);font-family:monospace">/away Grund</code> – als abwesend markieren, z.B. <em>/away bin kurz kochen</em></div>
+        <div><code style="color:var(--accent);font-family:monospace">/back</code> – wieder zurück melden</div>
+        <div><code style="color:var(--accent);font-family:monospace">/würfel</code> – einen Würfel werfen 🎲</div>
+        <div><code style="color:var(--accent);font-family:monospace">/diagnose</code> – Verbindungs-Bericht <span style="opacity:0.65">(nur bei Problemen nötig)</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin:2px 0 -2px">Nur für Admins 👑:</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.9">
+        <div><code style="color:#c8ff00;font-family:monospace">/knebel Name 1-5</code> – stumm schalten für 1–5 Minuten</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/unknebel Name</code> – wieder freischalten</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/makeadmin Name</code> – zum Admin machen</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/makeunadmin Name</code> – Admin-Rechte entziehen</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/hintergrund URL</code> – Login-Hintergrundbild ändern</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/hintergrund-reset</code> – Hintergrundbild zurücksetzen</div>
+        <div style="margin-top:4px"><code style="color:#ef4444;font-family:monospace">/cls</code> – <strong style="color:#ef4444">alle Nachrichten löschen</strong> <span style="opacity:0.65">(nur Superadmin ⚡)</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5;padding:0 2px">
+        💡 Namen dürfen groß oder klein geschrieben werden. Bei <code style="font-family:monospace">/w</code> und <code style="font-family:monospace">/pm</code> kommt der Text einfach hinter den Namen.
       </div>
     </div>
   </div>
