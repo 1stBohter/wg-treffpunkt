@@ -804,6 +804,7 @@
       <span style="color:var(--accent);font-family:monospace">/back</span> – Zurück<br>
       <span style="color:var(--accent);font-family:monospace">/pm Name Text</span> – Nachricht hinterlassen<br>
       <span style="color:var(--accent);font-family:monospace">/w Name Text</span> – Flüstern ohne Klicken<br>
+      <span style="color:var(--accent);font-family:monospace">/diagnose</span> – Verbindungs-Bericht (bei Problemen)<br>
       <span style="color:#ef4444;font-family:monospace">/cls</span> – Alle Nachrichten löschen <span style="color:#ef4444">(Superadmin)</span>
     </div>
   </div>
@@ -2900,6 +2901,10 @@ function subscribeMessages(){
     }
     if(status==='SUBSCRIBED'){
       // Verbindung steht wieder - Warnung weg, Heartbeat zuruecksetzen
+      if(reconnectLaeuft || warnungSichtbar){
+        diagZaehler.neuaufbauten++;
+        diag('✅ Verbindung wieder hergestellt');
+      }
       verbindungOk();
       // Nach einem Reconnect: verpasste Nachrichten still nachladen
       // (Fix: vorher blieb der Chat nach einem Abbruch "stumm",
@@ -2934,9 +2939,95 @@ function subscribeMessages(){
         }
       },1500);
     }
+    // NEU: Supabase meldet aktiv einen Fehler -> sofort reagieren,
+    // statt 20-40s zu warten bis der Wächter es merkt.
+    if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
+      diag('🔌 Supabase meldet: '+status);
+      if(currentUser && !reconnectLaeuft){
+        verbindungVerloren();
+      }
+    }
   });
 
   subscription = channel;
+}
+
+// ===== DIAGNOSE-PROTOKOLL =====
+// Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
+// (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
+// anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
+const diagnoseLog = [];
+const DIAG_START = new Date();
+let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
+
+function diag(text){
+  const t = new Date();
+  const zeit = String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0');
+  diagnoseLog.push(zeit+'  '+text);
+  if(diagnoseLog.length > 200) diagnoseLog.shift();  // Älteste rauswerfen, Speicher bleibt klein
+  console.log('[Diagnose] '+text);
+}
+
+function diagBericht(){
+  const laufzeitMin = Math.round((Date.now()-DIAG_START.getTime())/60000);
+  const kopf = [
+    '=== WG-TREFFPUNKT DIAGNOSE-BERICHT ===',
+    'Benutzer:      '+(currentUser?currentUser.name:'-'),
+    'Raum:          '+(currentRoom||'hauptchat'),
+    'Browser:       '+navigator.userAgent,
+    'Online-Status: '+(navigator.onLine?'verbunden':'KEIN INTERNET'),
+    'Eingeloggt um: '+DIAG_START.toLocaleTimeString('de-DE')+'  (seit '+laufzeitMin+' Minuten)',
+    '',
+    '--- ZUSAMMENFASSUNG ---',
+    'Verbindungsabbrüche:      '+diagZaehler.abbrueche,
+    'Automatische Neuaufbauten:'+diagZaehler.neuaufbauten,
+    'Nachgeladene Nachrichten: '+diagZaehler.nachgeladen,
+    'Fehlgeschlagene Pings:    '+diagZaehler.pingFehler,
+    'Tab-Wechsel:              '+diagZaehler.tabWechsel,
+    '',
+    '--- VERLAUF (neueste unten) ---'
+  ].join('\n');
+  return kopf+'\n'+(diagnoseLog.length?diagnoseLog.join('\n'):'(bisher keine Ereignisse - alles ruhig)');
+}
+
+function zeigeDiagnose(){
+  const alt = document.getElementById('diagOverlay');
+  if(alt) alt.remove();
+  const ov = document.createElement('div');
+  ov.id = 'diagOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:720px;width:100%;max-height:85vh;display:flex;flex-direction:column;gap:12px';
+  const ta = document.createElement('textarea');
+  ta.readOnly = true;
+  ta.value = diagBericht();
+  ta.style.cssText = 'width:100%;flex:1;min-height:340px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-family:monospace;font-size:11px;line-height:1.5;resize:vertical';
+  const titel = document.createElement('div');
+  titel.style.cssText = 'font-weight:700;font-size:16px;color:var(--text)';
+  titel.textContent = '🩺 Diagnose-Bericht';
+  const hinweis = document.createElement('div');
+  hinweis.style.cssText = 'font-size:12px;color:var(--text-muted);line-height:1.5';
+  hinweis.textContent = 'Auf "Kopieren" klicken und den Text an Torsten schicken. Dieser Bericht wird nirgends gespeichert und niemand sonst sieht ihn.';
+  const reihe = document.createElement('div');
+  reihe.style.cssText = 'display:flex;gap:10px;justify-content:flex-end';
+  const kopBtn = document.createElement('button');
+  kopBtn.textContent = '📋 Kopieren';
+  kopBtn.style.cssText = 'padding:10px 18px;border-radius:10px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer;font-size:14px';
+  kopBtn.onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(ta.value); }
+    catch(e){ ta.select(); document.execCommand('copy'); }
+    kopBtn.textContent = '✅ Kopiert!';
+    setTimeout(()=>{ kopBtn.textContent = '📋 Kopieren'; }, 2000);
+  };
+  const zuBtn = document.createElement('button');
+  zuBtn.textContent = 'Schließen';
+  zuBtn.style.cssText = 'padding:10px 18px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;cursor:pointer;font-size:14px';
+  zuBtn.onclick = ()=> ov.remove();
+  reihe.appendChild(kopBtn); reihe.appendChild(zuBtn);
+  box.appendChild(titel); box.appendChild(hinweis); box.appendChild(ta); box.appendChild(reihe);
+  ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 
 // ===== VERBINDUNGS-WÄCHTER (HEARTBEAT) v2 =====
@@ -2992,6 +3083,8 @@ function verbindungVerloren(){
   if(!currentUser) return;
   reconnectLaeuft = true;
   nachReconnectNachladen = true; // nach dem Neuaufbau Verpasstes nachladen
+  diagZaehler.abbrueche++;
+  diag('⚠️ Verbindung verloren -> Neuaufbau wird gestartet');
   // Sauberer Neuaufbau
   setTimeout(()=>{
     if(!currentUser){ reconnectLaeuft=false; return; }
@@ -3004,6 +3097,7 @@ function verbindungVerloren(){
     reconnectWatchdog = setTimeout(()=>{
       if(reconnectLaeuft && currentUser){
         console.log('Heartbeat: Reconnect hing fest - neuer Versuch');
+        diag('❌ Neuaufbau hing 12s fest -> neuer Versuch');
         reconnectLaeuft = false;
         verbindungVerloren();
       }
@@ -3076,6 +3170,8 @@ async function nachrichtenSync(){
     if(neu > 0){
       document.getElementById('welcomeMsg')?.remove();
       area.scrollTop = area.scrollHeight;
+      diagZaehler.nachgeladen += neu;
+      diag('📬 '+neu+' Nachricht(en) nachgeladen'+(echtVerpasst>0?' - davon '+echtVerpasst+' ECHT VERPASST (Echtzeit hat versagt)':' (nur Zeitversatz, harmlos)')+(document.hidden?' [Tab im Hintergrund]':''));
     }
     // Selbstheilung: Wenn der Sync ZWEIMAL hintereinander echte Lücken findet,
     // ist der Echtzeit-Kanal offenbar tot -> leise im Hintergrund neu verbinden
@@ -3084,6 +3180,7 @@ async function nachrichtenSync(){
       echtVerpassteSyncs++;
       if(echtVerpassteSyncs >= 2 && !reconnectLaeuft){
         console.log('Sync: Echtzeit-Kanal verschläft Nachrichten - leiser Neuaufbau');
+        diag('🩹 Selbstheilung: Echtzeit-Kanal verschläft Nachrichten -> leiser Neuaufbau');
         echtVerpassteSyncs = 0;
         verbindungVerloren();
       }
@@ -3104,9 +3201,17 @@ function startHeartbeat(){
   clearInterval(nachrichtenSyncTimer);
   letztesLebenszeichen = Date.now();
   fehlgeschlagenePings = 0;
-  // Lücken-Füller: alle 10 Sekunden leise nachschauen ob Nachrichten fehlen
+  // Lücken-Füller: alle 10 Sekunden leise nachschauen ob Nachrichten fehlen.
+  // WICHTIG: läuft jetzt AUCH im Hintergrund-Tab weiter (nur seltener).
+  // Vorher pausierte er komplett wenn der Tab nicht vorne war - dadurch kam
+  // gerade dann nichts an, wenn der Schutz am nötigsten gewesen wäre.
+  // (Firefox drosselt Hintergrund-Tabs besonders stark.)
+  let syncTakt = 0;
   nachrichtenSyncTimer = setInterval(()=>{
-    if(!currentUser || document.hidden) return;
+    if(!currentUser) return;
+    syncTakt++;
+    // Tab im Vordergrund: jedes Mal (10s). Im Hintergrund: jedes 3. Mal (30s).
+    if(document.hidden && (syncTakt % 3 !== 0)) return;
     nachrichtenSync();
   }, 10000);
   // Alle 20 Sekunden EIN aktiver Ping.
@@ -3116,7 +3221,9 @@ function startHeartbeat(){
     if(!currentUser || !subscription) return;
     if(reconnectLaeuft) return;   // Neuaufbau läuft bereits
     if(pingLaeuft) return;        // vorheriger Ping noch unterwegs
-    if(document.hidden) return;   // Tab im Hintergrund: Browser drosselt eh - Prüfung beim Zurückkommen
+    // Hinweis: läuft bewusst AUCH im Hintergrund-Tab weiter.
+    // Browser drosseln zwar die Zeitabstände, aber ein toter Kanal
+    // wird so trotzdem erkannt statt unbemerkt zu bleiben.
     pingLaeuft = true;
     const ok = await pingVerbindung();
     pingLaeuft = false;
@@ -3124,6 +3231,8 @@ function startHeartbeat(){
       verbindungOk();
     } else {
       fehlgeschlagenePings++;
+      diagZaehler.pingFehler++;
+      diag('📡 Ping ohne Antwort ('+fehlgeschlagenePings+'x in Folge)'+(document.hidden?' [Tab im Hintergrund]':''));
       console.log('Heartbeat: Ping fehlgeschlagen ('+fehlgeschlagenePings+'x)');
       // Erst beim ZWEITEN Fehlschlag in Folge reagieren -
       // ein einzelner kann ein harmloser Mini-Aussetzer sein.
@@ -3139,7 +3248,9 @@ function startHeartbeat(){
 // (Browser legen Hintergrund-Tabs schlafen - das war vorher eine häufige
 //  Quelle für die rote Warnleiste direkt nach dem Tab-Wechsel.)
 document.addEventListener('visibilitychange', async ()=>{
-  if(document.hidden || !currentUser || !subscription) return;
+  if(document.hidden){ diagZaehler.tabWechsel++; diag('👁️ Tab in den Hintergrund'); return; }
+  diag('👁️ Tab wieder im Vordergrund');
+  if(!currentUser || !subscription) return;
   if(reconnectLaeuft || pingLaeuft) return;
   pingLaeuft = true;
   const ok = await pingVerbindung();
@@ -3149,13 +3260,16 @@ document.addEventListener('visibilitychange', async ()=>{
     verpassteNachrichtenNachladen();
   } else {
     fehlgeschlagenePings = 2;
+    diag('📡 Ping nach Tab-Rückkehr fehlgeschlagen');
     zeigeVerbindungsWarnung();
     verbindungVerloren();
   }
 });
 
 // Internet war kurz weg und ist wieder da (z.B. WLAN gewechselt): sofort neu verbinden
+window.addEventListener('offline', ()=>{ diag('🚫 INTERNET WEG (Browser meldet offline)'); });
 window.addEventListener('online', ()=>{
+  diag('🌐 Internet wieder da -> Verbindung wird neu aufgebaut');
   if(!currentUser) return;
   console.log('Netzwerk wieder da - Verbindung wird neu aufgebaut');
   clearTimeout(reconnectWatchdog);
@@ -3429,6 +3543,12 @@ async function handleCommand(content){
     });
     if(error){ showChatInfo('❌ Fehler: '+error.message); return true; }
     showChatInfo(`📩 PM an ${targetName} hinterlassen!`);
+    return true;
+  }
+
+  // /diagnose - Verbindungs-Bericht anzeigen (für Fehlersuche, für alle nutzbar)
+  if(cmd === '/diagnose' || cmd === '/diag'){
+    zeigeDiagnose();
     return true;
   }
 
