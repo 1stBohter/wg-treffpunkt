@@ -729,6 +729,7 @@
         <div><code style="color:#c8ff00;font-family:monospace">/unknebel Name</code> – wieder freischalten</div>
         <div><code style="color:#c8ff00;font-family:monospace">/makeadmin Name</code> – zum Admin machen</div>
         <div><code style="color:#c8ff00;font-family:monospace">/makeunadmin Name</code> – Admin-Rechte entziehen</div>
+        <div><code style="color:#c8ff00;font-family:monospace">/smilie-neu</code> – neuen Smiley hochladen <span style="opacity:0.65">(oder ➕ im Smilie-Fenster)</span></div>
         <div><code style="color:#c8ff00;font-family:monospace">/hintergrund URL</code> – Login-Hintergrundbild ändern</div>
         <div><code style="color:#c8ff00;font-family:monospace">/hintergrund-reset</code> – Hintergrundbild zurücksetzen</div>
         <div style="margin-top:4px"><code style="color:#ef4444;font-family:monospace">/cls</code> – <strong style="color:#ef4444">alle Nachrichten löschen</strong> <span style="opacity:0.65">(nur Superadmin ⚡)</span></div>
@@ -1057,7 +1058,10 @@
         <div class="smilie-panel" id="smiliePanel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
             <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">🎭 Chat-Smilies</span>
-            <button onclick="closeSmiliePanel();" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;z-index:10000;position:relative;">✕</button>
+            <div style="display:flex;align-items:center;gap:4px">
+              <button id="smilieAddBtn" onclick="zeigeSmilieVerwalter();" title="Neuen Smiley hinzufügen" style="display:none;background:none;border:none;color:var(--accent);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:6px;z-index:10000;position:relative;">➕</button>
+              <button onclick="closeSmiliePanel();" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:6px;z-index:10000;position:relative;">✕</button>
+            </div>
           </div>
           <div class="smilie-grid" id="smilieGrid"></div>
         </div>
@@ -1246,7 +1250,6 @@ const SMILIES = [
   {code:'pokal',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Pokal.gif'},
   {code:'puste',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Puste.gif'},
   {code:'rad',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Rad.gif'},
-  {code:'radt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Radt.gif'},
   {code:'raus',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Raus.jpg'},
   {code:'reiten',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Reiten1.gif'},
   {code:'rot',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/rot.jpg'},
@@ -1255,7 +1258,6 @@ const SMILIES = [
   {code:'sekt2',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Sekt2.gif'},
   {code:'spank',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/spank.gif'},
   {code:'spd',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPD.jpg'},
-  {code:'spdt',     url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/SPDt.jpg'},
   {code:'tages',    url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tages.jpg'},
   {code:'tanzen',   url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tanzen.gif'},
   {code:'tee',      url:'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Tee.jpg'},
@@ -1290,6 +1292,218 @@ function extractYouTubeId(text){
   if(!text) return null;
   const m = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
+}
+
+// ===== EIGENE SMILIES (aus der Datenbank) =====
+// Neue Smilies werden NICHT mehr im Code eingetragen, sondern über das
+// ➕-Fenster im Smilie-Panel hochgeladen. Sie landen in der Tabelle
+// "custom_smilies" und werden hier beim Start dazugeladen.
+let customSmilies = [];
+
+async function ladeCustomSmilies(){
+  try{
+    const {data,error} = await sb.from('custom_smilies').select('*').order('code');
+    if(error || !data) return;
+    // Erst die bisher geladenen eigenen Smilies wieder rausnehmen
+    customSmilies.forEach(cs=>{
+      const i = SMILIES.findIndex(s=>s.code===cs.code && s.custom);
+      if(i>=0) SMILIES.splice(i,1);
+    });
+    customSmilies = data.map(d=>({code:d.code, url:d.url, custom:true, id:d.id}));
+    // Dann frisch anhängen (eingebaute Smilies haben Vorrang)
+    customSmilies.forEach(cs=>{
+      if(!SMILIES.some(s=>s.code===cs.code)) SMILIES.push(cs);
+    });
+    // Panel neu aufbauen damit die neuen sofort auftauchen
+    const grid=document.getElementById('smilieGrid');
+    if(grid){ grid.innerHTML=''; buildSmiliePanel(); }
+  }catch(e){ console.log('Eigene Smilies:', e); }
+}
+
+// ===== SMILEY-VERWALTER (Hinzufügen / Löschen) =====
+function zeigeSmilieVerwalter(){
+  if(!currentUser || !currentUser.isAdmin){
+    showChatInfo('❌ Nur Admins dürfen Smilies verwalten.');
+    return;
+  }
+  const alt = document.getElementById('smilieAddOverlay');
+  if(alt) alt.remove();
+  const ov = document.createElement('div');
+  ov.id = 'smilieAddOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px';
+
+  const titel = document.createElement('div');
+  titel.style.cssText = 'font-weight:700;font-size:16px;color:var(--text)';
+  titel.textContent = '➕ Neuen Smiley hinzufügen';
+
+  const hinweis = document.createElement('div');
+  hinweis.style.cssText = 'font-size:12px;color:var(--text-muted);line-height:1.5';
+  hinweis.textContent = 'Bild aussuchen, Kürzel eintippen, fertig. Der Smiley ist danach sofort für alle da – Supabase musst du nicht mehr anfassen.';
+
+  // Datei-Auswahl
+  const dateiBtn = document.createElement('input');
+  dateiBtn.type = 'file';
+  dateiBtn.accept = 'image/gif,image/png,image/jpeg,image/webp';
+  dateiBtn.style.cssText = 'padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;width:100%';
+
+  const vorschau = document.createElement('div');
+  vorschau.style.cssText = 'display:none;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:12px';
+  const vorschauBild = document.createElement('img');
+  vorschauBild.style.cssText = 'width:64px;height:64px;object-fit:contain;background:rgba(255,255,255,0.05);border-radius:8px';
+  const vorschauText = document.createElement('div');
+  vorschauText.style.cssText = 'font-size:12px;color:var(--text-muted);line-height:1.5';
+  vorschau.appendChild(vorschauBild); vorschau.appendChild(vorschauText);
+
+  let gewaehlteDatei = null;
+  dateiBtn.onchange = ()=>{
+    gewaehlteDatei = dateiBtn.files[0] || null;
+    if(!gewaehlteDatei){ vorschau.style.display='none'; return; }
+    if(gewaehlteDatei.size > 3*1024*1024){
+      meldung('❌ Bild ist zu groß ('+(gewaehlteDatei.size/1024/1024).toFixed(1)+' MB). Bitte unter 3 MB.', true);
+      gewaehlteDatei = null; dateiBtn.value=''; vorschau.style.display='none';
+      return;
+    }
+    vorschauBild.src = URL.createObjectURL(gewaehlteDatei);
+    vorschauText.textContent = gewaehlteDatei.name + '  ·  ' + Math.round(gewaehlteDatei.size/1024) + ' KB';
+    vorschau.style.display = 'flex';
+    // Kürzel automatisch aus dem Dateinamen vorschlagen
+    if(!codeFeld.value){
+      codeFeld.value = gewaehlteDatei.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,20);
+      pruefeCode();
+    }
+  };
+
+  // Kürzel
+  const codeLabel = document.createElement('div');
+  codeLabel.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:4px';
+  codeLabel.textContent = 'Kürzel zum Tippen (nur Buchstaben und Zahlen):';
+  const codeReihe = document.createElement('div');
+  codeReihe.style.cssText = 'display:flex;align-items:center;gap:8px';
+  const doppel = document.createElement('span');
+  doppel.style.cssText = 'font-family:monospace;font-size:20px;color:var(--accent);font-weight:700';
+  doppel.textContent = ':';
+  const codeFeld = document.createElement('input');
+  codeFeld.type = 'text';
+  codeFeld.maxLength = 20;
+  codeFeld.placeholder = 'z.B. koeln';
+  codeFeld.style.cssText = 'flex:1;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:monospace';
+  codeReihe.appendChild(doppel); codeReihe.appendChild(codeFeld);
+
+  const meldungBox = document.createElement('div');
+  meldungBox.style.cssText = 'font-size:12px;line-height:1.5;min-height:18px';
+  function meldung(text, fehler){
+    meldungBox.textContent = text;
+    meldungBox.style.color = fehler ? '#ef4444' : '#22c55e';
+  }
+
+  function saeubere(){
+    const s = codeFeld.value.toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(codeFeld.value !== s) codeFeld.value = s;
+    return s;
+  }
+  function pruefeCode(){
+    const c = saeubere();
+    if(!c){ meldung('', false); return false; }
+    if(c.length < 2){ meldung('⚠️ Kürzel muss mindestens 2 Zeichen haben.', true); return false; }
+    if(SMILIES.some(s=>s.code === c)){ meldung('❌ ":'+c+'" ist schon vergeben – bitte ein anderes Kürzel.', true); return false; }
+    meldung('✅ ":'+c+'" ist frei.', false);
+    return true;
+  }
+  codeFeld.oninput = pruefeCode;
+
+  // Speichern
+  const speichern = document.createElement('button');
+  speichern.textContent = '💾 Smiley hinzufügen';
+  speichern.style.cssText = 'padding:12px 18px;border-radius:10px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer;font-size:14px';
+  speichern.onclick = async ()=>{
+    const c = saeubere();
+    if(!gewaehlteDatei){ meldung('❌ Bitte zuerst ein Bild auswählen.', true); return; }
+    if(!pruefeCode()) return;
+    speichern.disabled = true;
+    speichern.textContent = '⏳ Wird hochgeladen…';
+    try{
+      const ext = (gewaehlteDatei.name.split('.').pop()||'png').toLowerCase();
+      // "smilie_" im Namen schützt die Datei vor der automatischen Aufräum-Funktion
+      const fname = 'smilie_' + c + '.' + ext;
+      const {error:ue} = await sb.storage.from('chat-media').upload(fname, gewaehlteDatei, {cacheControl:'3600', upsert:true});
+      if(ue) throw new Error(ue.message);
+      const {data:ud} = sb.storage.from('chat-media').getPublicUrl(fname);
+      const {error:ie} = await sb.from('custom_smilies').insert({code:c, url:ud.publicUrl, created_by:currentUser.name});
+      if(ie) throw new Error(ie.message);
+      await ladeCustomSmilies();
+      meldung('✅ ":'+c+'" wurde hinzugefügt und ist sofort für alle da!', false);
+      gewaehlteDatei = null; dateiBtn.value = ''; codeFeld.value = '';
+      vorschau.style.display = 'none';
+      baueListe();
+    }catch(e){
+      meldung('❌ Fehler: ' + e.message, true);
+    }
+    speichern.disabled = false;
+    speichern.textContent = '💾 Smiley hinzufügen';
+  };
+
+  // Liste der eigenen Smilies mit Löschen-Knopf
+  const listeTitel = document.createElement('div');
+  listeTitel.style.cssText = 'font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px';
+  const liste = document.createElement('div');
+  liste.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px';
+
+  function baueListe(){
+    listeTitel.textContent = 'Selbst hinzugefügt (' + customSmilies.length + ')';
+    liste.innerHTML = '';
+    if(customSmilies.length === 0){
+      const leer = document.createElement('div');
+      leer.style.cssText = 'font-size:12px;color:var(--text-muted);grid-column:1/-1';
+      leer.textContent = 'Noch keine eigenen Smilies. Das erste oben hinzufügen!';
+      liste.appendChild(leer);
+      return;
+    }
+    customSmilies.forEach(cs=>{
+      const z = document.createElement('div');
+      z.style.cssText = 'background:var(--surface2);border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px';
+      const b = document.createElement('img');
+      b.src = cs.url; b.style.cssText = 'width:44px;height:44px;object-fit:contain';
+      const t = document.createElement('div');
+      t.style.cssText = 'font-size:10px;font-family:monospace;color:var(--text-muted);word-break:break-all';
+      t.textContent = ':' + cs.code;
+      const del = document.createElement('button');
+      del.textContent = '🗑️ löschen';
+      del.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:none;color:#ef4444;cursor:pointer';
+      del.onclick = async ()=>{
+        if(!confirm('Smiley ":'+cs.code+'" wirklich löschen?')) return;
+        try{
+          await sb.from('custom_smilies').delete().eq('id', cs.id);
+          try{
+            const datei = decodeURIComponent(cs.url.split('chat-media/')[1].split('?')[0]);
+            if(datei) await sb.storage.from('chat-media').remove([datei]);
+          }catch(e){}
+          await ladeCustomSmilies();
+          baueListe();
+          meldung('🗑️ ":'+cs.code+'" wurde gelöscht.', false);
+        }catch(e){ meldung('❌ Fehler beim Löschen: '+e.message, true); }
+      };
+      z.appendChild(b); z.appendChild(t); z.appendChild(del);
+      liste.appendChild(z);
+    });
+  }
+  baueListe();
+
+  const zuBtn = document.createElement('button');
+  zuBtn.textContent = 'Schließen';
+  zuBtn.style.cssText = 'padding:10px 18px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;cursor:pointer;font-size:14px;align-self:flex-end';
+  zuBtn.onclick = ()=> ov.remove();
+
+  box.appendChild(titel); box.appendChild(hinweis);
+  box.appendChild(dateiBtn); box.appendChild(vorschau);
+  box.appendChild(codeLabel); box.appendChild(codeReihe);
+  box.appendChild(meldungBox); box.appendChild(speichern);
+  box.appendChild(listeTitel); box.appendChild(liste);
+  box.appendChild(zuBtn);
+  ov.appendChild(box);
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 
 // ===== SMILEY-PRÜFER =====
@@ -2570,7 +2784,11 @@ function startApp(){
   // Admin-Button anzeigen
   if(currentUser.isAdmin){
     document.getElementById('adminMenuBtn').style.display = 'flex';
+    const sab = document.getElementById('smilieAddBtn');
+    if(sab) sab.style.display = 'block';
   }
+  // Eigene Smilies aus der Datenbank dazuladen
+  ladeCustomSmilies();
   // PM-Nachrichten prüfen
   setTimeout(async()=>{
     const {data: pms} = await sb.from('private_messages')
@@ -2892,7 +3110,7 @@ async function loadMessages(){
         .map(m => m.media_url)
         .filter(url => url && url.includes('chat-media/'))
         .map(url => url.split('chat-media/')[1].split('?')[0])
-        .filter(f => f && !f.endsWith('.gif') && !f.endsWith('.png') && !f.match(/^(Bier|Trump|Ninja|Lol|Cool|Budda|Berlin|Bambam)/i));
+        .filter(f => f && !f.endsWith('.gif') && !f.endsWith('.png') && !f.startsWith('smilie_') && !f.startsWith('avatar_') && !f.match(/^(Bier|Trump|Ninja|Lol|Cool|Budda|Berlin|Bambam)/i));
       
       if(filenames.length > 0){
         await sb.storage.from('chat-media').remove(filenames);
@@ -3665,6 +3883,12 @@ async function handleCommand(content){
     return true;
   }
 
+  // /smilie-neu - Smiley-Verwalter öffnen (nur Admins)
+  if(cmd === '/smilie-neu' || cmd === '/smilie'){
+    zeigeSmilieVerwalter();
+    return true;
+  }
+
   // /smilies - prüft welche Smiley-Bilder fehlen oder kaputt sind
   if(cmd === '/smilies' || cmd === '/smilie-check'){
     zeigeSmilieCheck();
@@ -3920,6 +4144,8 @@ function toggleSmiliePanel(e){
     const btn = e ? e.currentTarget : document.querySelector('[onclick*="toggleSmiliePanel"]');
     positionPanel(p, btn);
     p.classList.add('open');
+    // Beim Öffnen kurz nachschauen ob jemand neue Smilies hinzugefügt hat
+    ladeCustomSmilies();
   }
 }
 function insertEmoji(em){
