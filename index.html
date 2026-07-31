@@ -66,6 +66,22 @@
     transition: background-image 0.5s ease;
     z-index:0;
   }
+  /* Schichten für "Bild ganz zeigen": unscharfe Füllung hinten,
+     vollständiges Bild vorne - so entstehen keine leeren Balken */
+  .residents-bg-layer {
+    position:absolute;inset:0;
+    background-repeat:no-repeat;
+    background-position:center;
+    display:none;
+  }
+  .residents-bg-blur {
+    background-size:cover;
+    filter:blur(28px) brightness(0.5);
+    transform:scale(1.15);
+  }
+  .residents-bg-sharp {
+    background-size:contain;
+  }
   .residents-building::after {
     content:'';position:absolute;inset:0;
     background:linear-gradient(
@@ -522,7 +538,10 @@
 
   <!-- MITBEWOHNER PANEL LINKS -->
   <div class="residents-panel">
-    <div class="residents-building" id="loginBg"></div>
+    <div class="residents-building" id="loginBg">
+      <div class="residents-bg-layer residents-bg-blur" id="loginBgBlur"></div>
+      <div class="residents-bg-layer residents-bg-sharp" id="loginBgSharp"></div>
+    </div>
     <div class="building-badge">
       <div class="building-badge-title">WG-Treffpunkt</div>
       <div class="building-badge-sub">WG-Projekt Köln</div>
@@ -1307,6 +1326,7 @@ function extractYouTubeId(text){
 // leicht wieder zurück zum Standardbild.
 let schilderListe = [];
 let aktivesSchild = '';
+let aktiverFit = 'cover';
 
 async function ladeSchilder(){
   try{
@@ -1315,8 +1335,10 @@ async function ladeSchilder(){
   }catch(e){ schilderListe = []; }
   try{
     const {data:s} = await sb.from('settings').select('value').eq('key','login_background').maybeSingle();
-    aktivesSchild = (s && s.value) ? s.value.trim() : '';
-  }catch(e){ aktivesSchild = ''; }
+    const w = parseBgWert(s ? s.value : '');
+    aktivesSchild = w.url;
+    aktiverFit = w.fit;
+  }catch(e){ aktivesSchild = ''; aktiverFit = 'cover'; }
 }
 
 async function zeigeSchilderVerwalter(){
@@ -1350,22 +1372,25 @@ async function zeigeSchilderVerwalter(){
   const galerie = document.createElement('div');
   galerie.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px';
 
-  async function aktiviere(url, name){
+  async function aktiviere(url, name, fit){
     try{
-      await sb.from('settings').upsert({key:'login_background', value:url});
+      const wert = url ? JSON.stringify({url:url, fit:(fit==='contain'?'contain':'cover')}) : '';
+      await sb.from('settings').upsert({key:'login_background', value:wert});
       aktivesSchild = url;
-      setBackground(url);
+      aktiverFit = (fit==='contain'?'contain':'cover');
+      setBackground(url, aktiverFit);
       baueGalerie();
       meldung('✅ „'+name+'" ist jetzt das Eingangsbild – für alle sichtbar.', false);
     }catch(e){ meldung('❌ Fehler: '+e.message, true); }
   }
 
-  function kachel({name, url, istStandard}){
+  function kachel({name, url, istStandard, modus}){
     const aktiv = istStandard ? (aktivesSchild === '') : (aktivesSchild === url);
+    const fit = (modus === 'contain') ? 'contain' : 'cover';
     const k = document.createElement('div');
     k.style.cssText = 'border:2px solid '+(aktiv?'var(--accent)':'var(--border)')+';border-radius:12px;overflow:hidden;background:var(--surface2);display:flex;flex-direction:column';
     const bild = document.createElement('div');
-    bild.style.cssText = 'height:88px;background-size:cover;background-position:center;background-color:rgba(255,255,255,0.04)';
+    bild.style.cssText = 'height:88px;background-position:center;background-repeat:no-repeat;background-color:rgba(255,255,255,0.04);background-size:'+fit;
     bild.style.backgroundImage = 'url("'+(istStandard?DEFAULT_BG:url)+'")';
     const unten = document.createElement('div');
     unten.style.cssText = 'padding:8px;display:flex;flex-direction:column;gap:6px';
@@ -1373,6 +1398,33 @@ async function zeigeSchilderVerwalter(){
     t.style.cssText = 'font-size:12px;font-weight:600;color:var(--text);word-break:break-word;line-height:1.3';
     t.textContent = (istStandard?'🏠 ':'')+name;
     unten.appendChild(t);
+
+    // Umschalter: Bild füllen (beschneidet) oder ganz zeigen (nichts geht verloren)
+    if(!istStandard){
+      const wahl = document.createElement('div');
+      wahl.style.cssText = 'display:flex;gap:4px';
+      [['cover','Füllen'],['contain','Ganz zeigen']].forEach(function(paar){
+        const wert = paar[0], text = paar[1];
+        const b = document.createElement('button');
+        b.textContent = text;
+        const an = (fit === wert);
+        b.style.cssText = 'flex:1;font-size:10px;padding:4px 2px;border-radius:6px;cursor:pointer;border:1px solid '+(an?'var(--accent)':'var(--border)')+';background:'+(an?'rgba(200,255,0,0.15)':'none')+';color:'+(an?'var(--accent)':'var(--text-muted)');
+        b.onclick = async function(){
+          try{
+            const eintrag = schilderListe.find(s=>s.url===url);
+            if(eintrag){
+              await sb.from('hintergruende').update({modus:wert}).eq('id', eintrag.id);
+              eintrag.modus = wert;
+            }
+            // Wenn dieses Bild gerade aktiv ist, sofort für alle neu anwenden
+            if(aktivesSchild === url) await aktiviere(url, name, wert);
+            else baueGalerie();
+          }catch(e){ meldung('❌ Fehler: '+e.message, true); }
+        };
+        wahl.appendChild(b);
+      });
+      unten.appendChild(wahl);
+    }
 
     if(aktiv){
       const badge = document.createElement('div');
@@ -1383,7 +1435,7 @@ async function zeigeSchilderVerwalter(){
       const btn = document.createElement('button');
       btn.textContent = 'Aktivieren';
       btn.style.cssText = 'font-size:12px;padding:6px 10px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer';
-      btn.onclick = ()=> aktiviere(istStandard?'':url, name);
+      btn.onclick = ()=> aktiviere(istStandard?'':url, name, fit);
       unten.appendChild(btn);
     }
     if(!istStandard){
@@ -1400,7 +1452,7 @@ async function zeigeSchilderVerwalter(){
             if(datei) await sb.storage.from('chat-media').remove([datei]);
           }catch(e){}
           // Falls es gerade aktiv war: zurück zum Standardbild
-          if(aktivesSchild === url) await aktiviere('', 'Standardbild');
+          if(aktivesSchild === url) await aktiviere('', 'Standardbild', 'cover');
           await ladeSchilder();
           baueGalerie();
           meldung('🗑️ „'+name+'" wurde gelöscht.', false);
@@ -1415,7 +1467,7 @@ async function zeigeSchilderVerwalter(){
   function baueGalerie(){
     galerie.innerHTML = '';
     galerie.appendChild(kachel({name:'Standardbild', url:'', istStandard:true}));
-    schilderListe.forEach(s=> galerie.appendChild(kachel({name:s.name, url:s.url, istStandard:false})));
+    schilderListe.forEach(s=> galerie.appendChild(kachel({name:s.name, url:s.url, istStandard:false, modus:s.modus})));
   }
 
   // --- Neues Schild hochladen ---
@@ -1438,6 +1490,7 @@ async function zeigeSchilderVerwalter(){
   vorschau.style.cssText = 'display:none;height:110px;border-radius:10px;background-size:cover;background-position:center';
 
   let gewaehlteDatei = null;
+  let gemessenerModus = 'cover';
   dateiBtn.onchange = ()=>{
     gewaehlteDatei = dateiBtn.files[0] || null;
     if(!gewaehlteDatei){ vorschau.style.display='none'; return; }
@@ -1445,10 +1498,24 @@ async function zeigeSchilderVerwalter(){
       meldung('❌ Bild ist zu groß ('+(gewaehlteDatei.size/1024/1024).toFixed(1)+' MB). Bitte unter 5 MB – ideal ist 1920×1080.', true);
       gewaehlteDatei = null; dateiBtn.value=''; vorschau.style.display='none'; return;
     }
-    vorschau.style.backgroundImage = 'url("'+URL.createObjectURL(gewaehlteDatei)+'")';
+    const objUrl = URL.createObjectURL(gewaehlteDatei);
+    vorschau.style.backgroundImage = 'url("'+objUrl+'")';
     vorschau.style.display = 'block';
     if(!nameFeld.value) nameFeld.value = gewaehlteDatei.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ').slice(0,40);
-    meldung('', false);
+    // Seitenverhältnis messen: breite Bilder werden beschnitten wenn man sie
+    // "füllen" lässt -> dann lieber gleich "ganz zeigen" vorschlagen.
+    const mess = new Image();
+    mess.onload = ()=>{
+      const breit = mess.naturalWidth > mess.naturalHeight * 1.1;
+      gemessenerModus = breit ? 'contain' : 'cover';
+      vorschau.style.backgroundSize = breit ? 'contain' : 'cover';
+      if(breit){
+        meldung('ℹ️ Breites Bild erkannt ('+mess.naturalWidth+'×'+mess.naturalHeight+') – wird auf „Ganz zeigen" gestellt, damit nichts abgeschnitten wird.', false);
+      } else {
+        meldung('', false);
+      }
+    };
+    mess.src = objUrl;
   };
 
   const speichern = document.createElement('button');
@@ -1468,7 +1535,7 @@ async function zeigeSchilderVerwalter(){
       const {error:ue} = await sb.storage.from('chat-media').upload(fname, gewaehlteDatei, {cacheControl:'3600', upsert:true});
       if(ue) throw new Error(ue.message);
       const {data:ud} = sb.storage.from('chat-media').getPublicUrl(fname);
-      const {error:ie} = await sb.from('hintergruende').insert({name:name, url:ud.publicUrl, created_by:currentUser.name});
+      const {error:ie} = await sb.from('hintergruende').insert({name:name, url:ud.publicUrl, modus:gemessenerModus, created_by:currentUser.name});
       if(ie) throw new Error(ie.message);
       await ladeSchilder();
       baueGalerie();
@@ -4790,24 +4857,56 @@ window.addEventListener('load', async()=>{
 // HINTERGRUND
 const DEFAULT_BG = 'https://agwhtutxyfeatguquvrh.supabase.co/storage/v1/object/public/chat-media/Chat_neu_2.jpg';
 
-function setBackground(url){
+// Der gespeicherte Wert ist entweder eine schlichte URL (alte Schreibweise,
+// bedeutet immer "füllen") oder ein kleines Paket mit URL + Anzeigeart.
+function parseBgWert(v){
+  if(!v) return {url:'', fit:'cover'};
+  const s = String(v).trim();
+  if(s.startsWith('{')){
+    try{
+      const o = JSON.parse(s);
+      return {url:(o.url||''), fit:(o.fit==='contain'?'contain':'cover')};
+    }catch(e){}
+  }
+  return {url:s, fit:'cover'};
+}
+
+function setBackground(url, fit){
   const el = document.getElementById('loginBg');
   if(!el) return;
   const bg = (url && url.trim()) ? url.trim() : DEFAULT_BG;
-  el.style.backgroundImage = 'url("' + bg + '")';
-  el.style.backgroundSize = 'cover';
-  el.style.backgroundPosition = 'center';
+  const blur = document.getElementById('loginBgBlur');
+  const sharp = document.getElementById('loginBgSharp');
+  if(fit === 'contain' && blur && sharp){
+    // Bild ganz zeigen: unscharfe Version füllt den Rand, echtes Bild liegt vorne
+    el.style.backgroundImage = 'none';
+    blur.style.backgroundImage = 'url("' + bg + '")';
+    sharp.style.backgroundImage = 'url("' + bg + '")';
+    blur.style.display = 'block';
+    sharp.style.display = 'block';
+  } else {
+    // Füllen (wie bisher): Bild deckt alles ab, Ränder werden beschnitten
+    if(blur) blur.style.display = 'none';
+    if(sharp) sharp.style.display = 'none';
+    el.style.backgroundImage = 'url("' + bg + '")';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+  }
 }
 
 async function loadBackground(){
   const {data} = await sb.from('settings').select('value').eq('key','login_background').maybeSingle();
-  setBackground(data ? data.value : '');
+  const w = parseBgWert(data ? data.value : '');
+  setBackground(w.url, w.fit);
   sb.channel('settings-channel')
     .on('postgres_changes',{event:'*',schema:'public',table:'settings'},payload=>{
       // Sowohl UPDATE als auch INSERT abfangen - beim allerersten Wechsel
       // legt Supabase die Zeile neu an (INSERT), das wurde vorher verschluckt.
       const zeile = payload.new || {};
-      if(zeile.key === 'login_background') setBackground(zeile.value);
+      if(zeile.key === 'login_background'){
+        const n = parseBgWert(zeile.value);
+        setBackground(n.url, n.fit);
+      }
     })
     .subscribe();
 }
