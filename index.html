@@ -3665,6 +3665,7 @@ function verbindungOk(){
   letztesLebenszeichen = Date.now();
   fehlgeschlagenePings = 0;
   reconnectLaeuft = false;
+  reconnectVersuche = 0;   // Wartezeit wieder auf Anfang
   clearTimeout(reconnectWatchdog);
   if(warnungSichtbar){
     warnungSichtbar = false;
@@ -3680,39 +3681,60 @@ async function pingVerbindung(){
   try{
     // Falls gerade getippt wird, den Tipp-Status nicht versehentlich löschen
     const tipptGerade = (Date.now() - lastTypingSent) < 3000;
-    const antwort = await subscription.track(getMeinePresence(tipptGerade));
+    // Zeitlimit: ohne das kann der Ping im Firefox ewig offen bleiben
+    const antwort = await mitZeitlimit(subscription.track(getMeinePresence(tipptGerade)), 8000);
     return antwort === 'ok';
   }catch(e){
     return false;
   }
 }
 
-function verbindungVerloren(){
+// Hilfsfunktion: bricht ein Warten ab, wenn der Server gar nicht antwortet.
+// Ohne das können Anfragen im Firefox ewig "hängen" und alles blockieren.
+function mitZeitlimit(versprechen, ms){
+  return Promise.race([
+    versprechen,
+    new Promise((_,ab)=> setTimeout(()=>ab(new Error('Zeitlimit')), ms))
+  ]);
+}
+
+let reconnectVersuche = 0;
+
+async function verbindungVerloren(){
   // Nur reconnecten wenn nicht eh schon laeuft
   if(reconnectLaeuft) return;
   if(!currentUser) return;
   reconnectLaeuft = true;
   nachReconnectNachladen = true; // nach dem Neuaufbau Verpasstes nachladen
   diagZaehler.abbrueche++;
-  diag('⚠️ Verbindung verloren -> Neuaufbau wird gestartet');
-  // Sauberer Neuaufbau
-  setTimeout(()=>{
+  reconnectVersuche++;
+  // WARTEZEIT WÄCHST (2s, 3.4s, 5.8s, 10s ... max 60s).
+  // Vorher wurde alle 13,5s stur neu verbunden - das hat Supabase
+  // regelrecht überrannt und die Verbindung erst recht blockiert.
+  const warte = Math.min(2000 * Math.pow(1.7, reconnectVersuche-1), 60000);
+  diag('⚠️ Verbindung verloren -> Neuaufbau in '+Math.round(warte/1000)+'s (Versuch '+reconnectVersuche+')');
+  clearTimeout(reconnectWatchdog);
+  setTimeout(async ()=>{
     if(!currentUser){ reconnectLaeuft=false; return; }
-    try { if(subscription) subscription.unsubscribe(); } catch(e){}
+    // WICHTIG: alten Kanal richtig ENTFERNEN, nicht nur abmelden.
+    // Vorher blieb der alte Kanal beim gleichen Namen liegen und hat den
+    // neuen blockiert -> "SUBSCRIBED" kam nie an, Endlosschleife.
+    try{
+      if(subscription) await mitZeitlimit(sb.removeChannel(subscription), 5000);
+    }catch(e){ diag('… alter Kanal ließ sich nicht sauber entfernen'); }
+    subscription = null;
+    if(!currentUser){ reconnectLaeuft=false; return; }
     subscribeMessages();
-    // WICHTIG (Fix "Taubheit"): Falls der Neuaufbau selbst hängen bleibt,
-    // Sperre nach 12s wieder freigeben und erneut versuchen.
-    // Vorher konnte sich der Reconnect dauerhaft selbst blockieren.
-    clearTimeout(reconnectWatchdog);
+    // Falls der Neuaufbau hängt: Sperre freigeben und erneut versuchen.
+    // 25s statt 12s - ein Verbindungsaufbau darf auch mal länger dauern.
     reconnectWatchdog = setTimeout(()=>{
       if(reconnectLaeuft && currentUser){
-        console.log('Heartbeat: Reconnect hing fest - neuer Versuch');
-        diag('❌ Neuaufbau hing 12s fest -> neuer Versuch');
+        diag('❌ Neuaufbau kam nicht durch -> nächster Versuch');
         reconnectLaeuft = false;
         verbindungVerloren();
       }
-    }, 12000);
-  }, 1500);
+    }, 25000);
+  }, warte);
 }
 
 function zeigeVerbindungsWarnung(){
@@ -3730,6 +3752,7 @@ function zeigeVerbindungsWarnung(){
 // fehlende Nachrichten an der richtigen Stelle einfügen.
 let letzteBekannteMsgZeit = null;   // Zeitstempel der neuesten bekannten Nachricht (Server-Zeit)
 let syncLaeuft = false;
+let syncStart = 0;
 let echtVerpassteSyncs = 0;         // zählt Sync-Runden mit wirklich verpassten Nachrichten
 
 function merkeMsgZeit(t){
@@ -3737,8 +3760,17 @@ function merkeMsgZeit(t){
 }
 
 async function nachrichtenSync(){
-  if(!currentUser || syncLaeuft) return;
+  if(!currentUser) return;
+  // SCHUTZ GEGEN DAUERBLOCKADE: Wenn eine Abfrage im Browser "hängen"
+  // bleibt, blieb syncLaeuft früher für immer auf true - der Lücken-Füller
+  // war dann still abgeschaltet. Nach 30s wird die Sperre jetzt gelöst.
+  if(syncLaeuft){
+    if(Date.now() - syncStart < 30000) return;
+    diag('🔧 Lücken-Füller hing fest -> wird zurückgesetzt');
+    syncLaeuft = false;
+  }
   syncLaeuft = true;
+  syncStart = Date.now();
   try{
     // Ab wann suchen? Ab der neuesten bekannten Nachricht, mit 90s Sicherheitspuffer
     let ab = SESSION_START;
@@ -3746,11 +3778,11 @@ async function nachrichtenSync(){
       const mitPuffer = new Date(new Date(letzteBekannteMsgZeit).getTime() - 90000).toISOString();
       if(mitPuffer > SESSION_START) ab = mitPuffer;
     }
-    const {data,error} = await sb.from('messages').select('*')
+    const {data,error} = await mitZeitlimit(sb.from('messages').select('*')
       .gte('created_at', ab)
       .neq('media_type','vote')
       .eq('room', currentRoom||'hauptchat')
-      .order('created_at',{ascending:true}).limit(100);
+      .order('created_at',{ascending:true}).limit(100), 15000);
     if(error || !data){ syncLaeuft = false; return; }
     const area = document.getElementById('messagesArea');
     if(!area){ syncLaeuft = false; return; }
@@ -3811,19 +3843,24 @@ function startHeartbeat(){
   clearInterval(nachrichtenSyncTimer);
   letztesLebenszeichen = Date.now();
   fehlgeschlagenePings = 0;
-  // Lücken-Füller: alle 10 Sekunden leise nachschauen ob Nachrichten fehlen.
-  // WICHTIG: läuft jetzt AUCH im Hintergrund-Tab weiter (nur seltener).
-  // Vorher pausierte er komplett wenn der Tab nicht vorne war - dadurch kam
-  // gerade dann nichts an, wenn der Schutz am nötigsten gewesen wäre.
-  // (Firefox drosselt Hintergrund-Tabs besonders stark.)
+  // Lücken-Füller. Läuft AUCH im Hintergrund-Tab weiter (nur seltener).
+  // Wenn die Echtzeit-Verbindung gerade klemmt, wird häufiger nachgeschaut -
+  // dann trägt das Nachschauen den Chat komplett, und niemand merkt etwas.
   let syncTakt = 0;
   nachrichtenSyncTimer = setInterval(()=>{
     if(!currentUser) return;
     syncTakt++;
-    // Tab im Vordergrund: jedes Mal (10s). Im Hintergrund: jedes 3. Mal (30s).
-    if(document.hidden && (syncTakt % 3 !== 0)) return;
-    nachrichtenSync();
-  }, 10000);
+    const echtzeitKaputt = reconnectLaeuft || reconnectVersuche > 0;
+    if(echtzeitKaputt){
+      nachrichtenSync();          // alle 5s - Notbetrieb
+      return;
+    }
+    if(document.hidden){
+      if(syncTakt % 6 === 0) nachrichtenSync();   // Hintergrund: alle 30s
+      return;
+    }
+    if(syncTakt % 2 === 0) nachrichtenSync();     // normal: alle 10s
+  }, 5000);
   // Alle 20 Sekunden EIN aktiver Ping.
   // (Vorher: alle 3s bei Stille - das hat den Server unnötig geflutet
   //  und konnte selbst Abbrüche mitverursachen.)
@@ -4047,9 +4084,13 @@ async function manuellerReconnect(){
   reconnectLaeuft = true;
   try {
     // Realtime-Verbindung komplett neu aufbauen
+    // WICHTIG: Kanal richtig ENTFERNEN, nicht nur abmelden - sonst blockiert
+    // der alte Kanal den neuen (gleicher Name) und es passiert gar nichts.
     if(subscription){
-      try { await subscription.unsubscribe(); } catch(e){}
+      try { await mitZeitlimit(sb.removeChannel(subscription), 5000); } catch(e){}
+      subscription = null;
     }
+    reconnectVersuche = 0;
     // Fotos + Nachrichten frisch laden, dann neu verbinden
     await loadAllPhotos();
     await loadMessages();
