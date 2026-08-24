@@ -2078,61 +2078,88 @@ async function joinAsGuest(){
   const name=document.getElementById('guestName').value.trim();
   if(!name||name.length<2) return showError('guestError','Bitte gib einen Namen ein (mind. 2 Zeichen).');
   const nameLower = name.toLowerCase();
-
-  // Regel 1: Ist der Name ein registrierter Member?
-  // Wir prüfen ob jemand mit diesem display_name schon in auth.users existiert
-  // Da wir keinen direkten Zugriff haben, prüfen wir über messages-Tabelle: 
-  // Nachrichten die is_guest=false haben mit diesem user_name
-  const {data:memberCheck} = await sb.from('messages')
-    .select('user_name')
-    .eq('is_guest', false)
-    .ilike('user_name', name)
-    .limit(1);
-  if(memberCheck && memberCheck.length > 0){
-    return showError('guestError','❌ "'+name+'" ist ein registrierter Member-Name und kann nicht als Gast genutzt werden.');
-  }
-
-  // Regel 2: Ist der Name gerade online? (echte Presence-Prüfung)
   const joinBtn=document.querySelector('#guestView .btn-primary');
+  // Knopf sperren: sonst starten mehrere Anmeldungen gleichzeitig und
+  // behindern sich gegenseitig (war eine Ursache fürs "mehrfach klicken müssen")
   if(joinBtn){joinBtn.disabled=true;joinBtn.textContent='⏳ Prüfe Name...';}
-  const onlineNames = await new Promise(resolve=>{
-    const ch=sb.channel('wg-treffpunkt-room');
-    const timer=setTimeout(()=>{ try{ch.unsubscribe();}catch(e){} resolve([]); },4000);
-    ch.on('presence',{event:'sync'},()=>{
-      clearTimeout(timer);
-      const names=Object.values(ch.presenceState()).flat().map(u=>(u.name||'').toLowerCase());
-      try{ch.unsubscribe();}catch(e){}
-      resolve(names);
-    });
-    ch.subscribe();
-  });
-  if(joinBtn){joinBtn.disabled=false;joinBtn.textContent='💬 Als Gast beitreten';}
-  if(onlineNames.includes(nameLower)){
-    return showError('guestError','❌ "'+name+'" ist gerade schon online! Bitte wähle einen anderen Namen.');
-  }
+  const knopfFrei = ()=>{ if(joinBtn){joinBtn.disabled=false;joinBtn.textContent='💬 Als Gast beitreten';} };
 
-  // Jeder Tab bekommt seine eigene Session-ID (sessionStorage = nur dieser Tab)
-  let guestId = sessionStorage.getItem('wg_guest_id');
-  if(!guestId){ guestId='guest_'+Math.random().toString(36).substr(2,9); sessionStorage.setItem('wg_guest_id',guestId); }
-  currentUser={name,isGuest:true,id:guestId,colorIndex:null,avatar:'👤'};
-  startApp();
+  try{
+    // Regel 1: Ist der Name ein registrierter Member?
+    const {data:memberCheck} = await mitZeitlimit(sb.from('messages')
+      .select('user_name')
+      .eq('is_guest', false)
+      .ilike('user_name', name)
+      .limit(1), 10000);
+    if(memberCheck && memberCheck.length > 0){
+      knopfFrei();
+      return showError('guestError','❌ "'+name+'" ist ein registrierter Member-Name und kann nicht als Gast genutzt werden.');
+    }
+
+    // Regel 2: Ist der Name gerade online? (echte Presence-Prüfung)
+    // WICHTIG: Der Prüf-Kanal heißt genauso wie der Haupt-Kanal. Wurde er nur
+    // "abgemeldet" statt richtig ENTFERNT, blockierte er danach den echten
+    // Chat-Kanal -> Login hing, man musste mehrfach klicken.
+    const onlineNames = await new Promise(resolve=>{
+      const ch=sb.channel('wg-treffpunkt-room');
+      let fertig=false;
+      const aufraeumen = async (namen)=>{
+        if(fertig) return; fertig=true;
+        clearTimeout(timer);
+        try{ await mitZeitlimit(sb.removeChannel(ch), 4000); }catch(e){}
+        resolve(namen);
+      };
+      const timer=setTimeout(()=>aufraeumen([]),4000);
+      ch.on('presence',{event:'sync'},()=>{
+        const names=Object.values(ch.presenceState()).flat().map(u=>(u.name||'').toLowerCase());
+        aufraeumen(names);
+      });
+      ch.subscribe();
+    });
+    if(onlineNames.includes(nameLower)){
+      knopfFrei();
+      return showError('guestError','❌ "'+name+'" ist gerade schon online! Bitte wähle einen anderen Namen.');
+    }
+
+    // Jeder Tab bekommt seine eigene Session-ID (sessionStorage = nur dieser Tab)
+    let guestId = sessionStorage.getItem('wg_guest_id');
+    if(!guestId){ guestId='guest_'+Math.random().toString(36).substr(2,9); sessionStorage.setItem('wg_guest_id',guestId); }
+    currentUser={name,isGuest:true,id:guestId,colorIndex:null,avatar:'👤'};
+    knopfFrei();
+    startApp();
+  }catch(e){
+    knopfFrei();
+    showError('guestError','⚠️ Der Server antwortet gerade nicht. Bitte gleich nochmal versuchen.');
+  }
 }
 
 async function login(){
   const chatname=document.getElementById('loginName').value.trim();
   const pass=document.getElementById('loginPassword').value;
   if(!chatname||!pass) return showError('loginError','Bitte alle Felder ausfüllen.');
-  // Email anhand Chatname nachschlagen
-  const {data:member,error:me}=await sb.from('members').select('email').ilike('display_name',chatname).maybeSingle();
-  if(me||!member) return showError('loginError','❌ Chat-Name "'+chatname+'" nicht gefunden.');
-  const {data,error}=await sb.auth.signInWithPassword({email:member.email,password:pass});
-  if(error) return showError('loginError','Login fehlgeschlagen: Falsches Passwort?');
-  const m=data.user.user_metadata;
-  // Admin-Status aus chat_admins Tabelle prüfen
-  const {data:adminCheck} = await sb.from('chat_admins').select('user_name').eq('user_name',(m.display_name||chatname).toLowerCase()).maybeSingle();
-  currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:!!adminCheck,photoUrl:m.photo_url||null};
-  await loadAllPhotos();
-  startApp();
+  const btn=document.querySelector('#loginView .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Anmelden...';}
+  const knopfFrei = ()=>{ if(btn){btn.disabled=false;btn.textContent='Anmelden';} };
+  try{
+    // Email anhand Chatname nachschlagen
+    const {data:member,error:me}=await mitZeitlimit(sb.from('members').select('email').ilike('display_name',chatname).maybeSingle(), 10000);
+    // Wichtig: Ein Serverfehler ist NICHT dasselbe wie "Name gibt es nicht".
+    // Vorher stand bei Serverproblemen fälschlich "Chat-Name nicht gefunden".
+    if(me){ knopfFrei(); return showError('loginError','⚠️ Der Server antwortet gerade nicht. Bitte gleich nochmal versuchen.'); }
+    if(!member){ knopfFrei(); return showError('loginError','❌ Chat-Name "'+chatname+'" nicht gefunden.'); }
+    const {data,error}=await mitZeitlimit(sb.auth.signInWithPassword({email:member.email,password:pass}), 15000);
+    if(error){ knopfFrei(); return showError('loginError','Login fehlgeschlagen: Falsches Passwort?'); }
+    const m=data.user.user_metadata;
+    // Admin-Status aus chat_admins Tabelle prüfen
+    const {data:adminCheck} = await mitZeitlimit(sb.from('chat_admins').select('user_name').eq('user_name',(m.display_name||chatname).toLowerCase()).maybeSingle(), 10000);
+    currentUser={name:m.display_name||chatname,isGuest:false,id:data.user.id,colorIndex:m.color_index??0,avatar:m.avatar||'⭐',isAdmin:!!adminCheck,photoUrl:m.photo_url||null};
+    await loadAllPhotos();
+    knopfFrei();
+    startApp();
+  }catch(e){
+    knopfFrei();
+    showError('loginError','⚠️ Der Server antwortet gerade nicht. Bitte gleich nochmal versuchen.');
+  }
 }
 
 async function register(){
@@ -2189,11 +2216,21 @@ async function cleanupMyMedia(){
 async function logout(){
   stopInactivityTimer();
   clearInterval(heartbeatTimer);
+  clearInterval(nachrichtenSyncTimer);
+  clearTimeout(reconnectWatchdog);
   warnungSichtbar = false;
+  reconnectLaeuft = false;
+  reconnectVersuche = 0;
+  syncLaeuft = false;
   const _b = document.getElementById('connWarnBanner'); if(_b) _b.style.display='none';
   if(currentUser) await cleanupMyMedia();
   if(currentUser) await sendSystemMsg(`👋 ${currentUser.name} verlässt den Chat`);
-  if(subscription){ await subscription.untrack(); subscription.unsubscribe(); }
+  if(subscription){ try{ await mitZeitlimit(subscription.untrack(), 4000); }catch(e){} }
+  // ALLE Kanäle sauber entfernen (auch Pinnwand, Knebel, Einstellungen).
+  // Vorher blieben die liegen - beim erneuten Anmelden im selben Tab
+  // entstanden dann doppelte Kanäle mit gleichem Namen, die sich blockierten.
+  try{ await mitZeitlimit(sb.removeAllChannels(), 5000); }catch(e){}
+  subscription = null;
   if(!currentUser.isGuest) await sb.auth.signOut();
   currentUser=null;
   document.getElementById('app').classList.remove('visible');
@@ -3534,13 +3571,22 @@ function subscribeMessages(){
         online_at: new Date().toISOString()
       });
       // Doppelte Namen prüfen
-      setTimeout(()=>{
+      setTimeout(async ()=>{
+        if(!currentUser) return;
         const state=channel.presenceState();
         const allUsers=Object.values(state).flat();
         const myName=currentUser.name.toLowerCase();
         const doppelt=allUsers.filter(u=>(u.name||'').toLowerCase()===myName);
         if(doppelt.length>1 && currentUser.isGuest){
-          channel.untrack();channel.unsubscribe();
+          // Kanal RICHTIG entfernen, nicht nur abmelden - sonst blockiert der
+          // Geisterkanal den nächsten Anmeldeversuch (mehrfach klicken müssen).
+          try{ await mitZeitlimit(channel.untrack(), 3000); }catch(e){}
+          try{ await mitZeitlimit(sb.removeChannel(channel), 4000); }catch(e){}
+          subscription = null;
+          clearInterval(heartbeatTimer);
+          clearInterval(nachrichtenSyncTimer);
+          reconnectLaeuft = false;
+          reconnectVersuche = 0;
           currentUser=null;
           document.getElementById('app').classList.remove('visible');
           document.getElementById('authOverlay').classList.remove('hidden');
