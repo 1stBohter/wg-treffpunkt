@@ -68,6 +68,25 @@
   }
   /* Schichten für "Bild ganz zeigen": unscharfe Füllung hinten,
      vollständiges Bild vorne - so entstehen keine leeren Balken */
+  /* Datei-Karte für Dokumente (txt, pdf, Word ...) */
+  .datei-karte {
+    display:flex;align-items:center;gap:10px;
+    margin-top:6px;padding:10px 12px;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:10px;
+    text-decoration:none;cursor:pointer;
+    transition:background 0.15s ease, border-color 0.15s ease;
+    max-width:300px;
+  }
+  .datei-karte:hover { background:rgba(200,255,0,0.12);border-color:var(--accent); }
+  .datei-icon { font-size:26px;line-height:1;flex-shrink:0; }
+  .datei-text { display:flex;flex-direction:column;gap:2px;min-width:0; }
+  .datei-name {
+    font-size:13px;font-weight:600;color:var(--text);
+    word-break:break-all;line-height:1.3;
+  }
+  .datei-hinweis { font-size:11px;color:var(--text-muted); }
   .residents-bg-layer {
     position:absolute;inset:0;
     background-repeat:no-repeat;
@@ -1062,7 +1081,7 @@
           <button class="toolbar-btn" onclick="saveChat()">💾 <span>Chat speichern</span></button>
           <button class="toolbar-btn" onclick="openSpiele()">✂️ <span>Spiele</span></button>
           <button class="toolbar-btn" onclick="manuellerReconnect()" title="Verbindung neu aufbauen">🔄 <span>Reconnect</span></button>
-          <input type="file" id="fileInput" accept="image/*,video/*" onchange="onFileSelect(event)">
+          <input type="file" id="fileInput" accept="image/*,video/*,.txt,.pdf,.doc,.docx,.odt,.rtf,.csv,.xls,.xlsx" onchange="onFileSelect(event)">
         </div>
 
         <div class="emoji-panel" id="emojiPanel">
@@ -3267,9 +3286,22 @@ function renderMsg(msg){
   }
   if(msg.media_url){
     const isVid=msg.media_type&&msg.media_type.startsWith('video');
-    bubbleContent+=isVid
-      ?`<video src="${msg.media_url}" controls></video>`
-      :`<img src="${msg.media_url}" onclick="openLB('${msg.media_url}')" alt="Bild">`;
+    const isImg=msg.media_type&&msg.media_type.startsWith('image');
+    if(isVid){
+      bubbleContent+=`<video src="${msg.media_url}" controls></video>`;
+    } else if(isImg || !msg.media_type){
+      bubbleContent+=`<img src="${msg.media_url}" onclick="openLB('${msg.media_url}')" alt="Bild">`;
+    } else {
+      // Dokument (txt, pdf, Word ...) -> anklickbare Datei-Karte
+      const roh = msg.media_url.split('/').pop().split('?')[0];
+      let anzeige;
+      try{ anzeige = decodeURIComponent(roh); }catch(e){ anzeige = roh; }
+      anzeige = anzeige.replace(/^doc_\d+_/,'');
+      bubbleContent+=`<a class="datei-karte" href="${msg.media_url}" target="_blank" rel="noopener">
+        <span class="datei-icon">${dokIcon(anzeige)}</span>
+        <span class="datei-text"><span class="datei-name">${esc(anzeige)}</span><span class="datei-hinweis">Zum Öffnen anklicken</span></span>
+      </a>`;
+    }
   }
   // YouTube-Videos direkt einbetten
   if(msg.content){
@@ -4097,9 +4129,18 @@ async function sendMessage(){
   let media_url=null,media_type=null;
   if(pendingFile){
     const ext=pendingFile.name.split('.').pop();
-    const fname=`${currentUser.id}_${Date.now()}.${ext}`;
+    let fname;
+    if(istDokument(pendingFile)){
+      // Bei Dokumenten den ORIGINALNAMEN mitnehmen, damit im Chat steht
+      // "Chatverlauf_23-08.txt" und nicht eine Zahlenkolonne.
+      const safe = pendingFile.name.replace(/[^\w.\-]+/g,'_').slice(-60);
+      fname = `doc_${Date.now()}_${safe}`;
+    } else {
+      fname = `${currentUser.id}_${Date.now()}.${ext}`;
+    }
     const {error:ue}=await sb.storage.from('chat-media').upload(fname,pendingFile,{cacheControl:'3600',upsert:false});
-    if(!ue){ const {data:ud}=sb.storage.from('chat-media').getPublicUrl(fname);media_url=ud.publicUrl;media_type=pendingFile.type; }
+    if(ue){ showChatInfo('❌ Datei konnte nicht hochgeladen werden: '+ue.message); }
+    else { const {data:ud}=sb.storage.from('chat-media').getPublicUrl(fname);media_url=ud.publicUrl;media_type=pendingFile.type||'application/octet-stream'; }
     clearUpload();
   }
   input.value='';updateChar();
@@ -4446,14 +4487,44 @@ function updateChar(){
 }
 
 // FILE UPLOAD
+// Dateiendungen die als "Dokument" behandelt werden (kein Bild/Video)
+const DOK_ICONS = {txt:'📄', csv:'📄', rtf:'📄', pdf:'📕', doc:'📘', docx:'📘',
+                   odt:'📘', xls:'📗', xlsx:'📗', zip:'🗜️'};
+
+function istDokument(file){
+  if(!file) return false;
+  if(file.type && (file.type.startsWith('image')||file.type.startsWith('video'))) return false;
+  return true;
+}
+function dokIcon(name){
+  const ext=(name||'').split('.').pop().toLowerCase();
+  return DOK_ICONS[ext] || '📎';
+}
+function lesbareGroesse(bytes){
+  if(bytes < 1024) return bytes+' B';
+  if(bytes < 1024*1024) return Math.round(bytes/1024)+' KB';
+  return (bytes/1024/1024).toFixed(1)+' MB';
+}
+
 function onFileSelect(e){
   const file=e.target.files[0];if(!file)return;
+  if(file.size > 45*1024*1024){
+    showChatInfo('❌ Datei ist zu groß ('+lesbareGroesse(file.size)+'). Maximal 45 MB.');
+    e.target.value=''; return;
+  }
   pendingFile=file;
   const thumb=document.getElementById('uploadThumb');
   thumb.innerHTML='';
   if(file.type.startsWith('video')){const v=document.createElement('video');v.src=URL.createObjectURL(file);v.style.cssText='height:44px;border-radius:6px';thumb.appendChild(v);}
+  else if(istDokument(file)){
+    // Dokumente haben keine Vorschau -> Symbol passend zur Dateiart zeigen
+    const d=document.createElement('div');
+    d.style.cssText='height:44px;width:44px;display:flex;align-items:center;justify-content:center;font-size:26px;background:rgba(255,255,255,0.06);border-radius:6px';
+    d.textContent=dokIcon(file.name);
+    thumb.appendChild(d);
+  }
   else{const img=document.createElement('img');img.src=URL.createObjectURL(file);thumb.appendChild(img);}
-  document.getElementById('uploadName').textContent=file.name;
+  document.getElementById('uploadName').textContent=file.name+'  ·  '+lesbareGroesse(file.size);
   document.getElementById('uploadPreview').classList.add('show');
   e.target.value='';
 }
