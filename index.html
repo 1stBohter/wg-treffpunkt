@@ -1752,7 +1752,7 @@ function zeigeSmilieVerwalter(){
   const listeTitel = document.createElement('div');
   listeTitel.style.cssText = 'font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px';
   const liste = document.createElement('div');
-  liste.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px';
+  liste.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;flex-shrink:0';
 
   function baueListe(){
     listeTitel.textContent = 'Selbst hinzugefügt (' + customSmilies.length + ')';
@@ -1803,11 +1803,11 @@ function zeigeSmilieVerwalter(){
   einHinweis.style.cssText = 'font-size:11px;color:var(--text-muted);line-height:1.5';
   einHinweis.textContent = 'Gelöschte Smilies verschwinden für alle aus der Auswahl. Unten unter „Gelöscht" kannst du sie jederzeit zurückholen.';
   const einListe = document.createElement('div');
-  einListe.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;max-height:260px;overflow-y:auto;padding:2px';
+  einListe.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;height:280px;flex-shrink:0;overflow-y:auto;padding:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px';
   const wegTitel = document.createElement('div');
   wegTitel.style.cssText = 'font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:6px';
   const wegListe = document.createElement('div');
-  wegListe.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px';
+  wegListe.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;flex-shrink:0';
 
   async function speichereVersteckte(neu){
     await sb.from('settings').upsert({key:'hidden_smilies', value:JSON.stringify(neu)});
