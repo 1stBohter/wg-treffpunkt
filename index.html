@@ -3731,6 +3731,7 @@ function subscribeMessages(){
 // Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
 // (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
 // anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
+const CHAT_VERSION = '2026-09-23-b';   // steht im Diagnosebericht
 const diagnoseLog = [];
 const DIAG_START = new Date();
 let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
@@ -3748,6 +3749,7 @@ function diagBericht(){
   const kopf = [
     '=== WG-TREFFPUNKT DIAGNOSE-BERICHT ===',
     'Benutzer:      '+(currentUser?currentUser.name:'-'),
+    'Version:       '+CHAT_VERSION,
     'Raum:          '+(currentRoom||'hauptchat'),
     'Browser:       '+navigator.userAgent,
     'Online-Status: '+(navigator.onLine?'verbunden':'KEIN INTERNET'),
@@ -3758,6 +3760,7 @@ function diagBericht(){
     'Automatische Neuaufbauten:'+diagZaehler.neuaufbauten,
     'Nachgeladene Nachrichten: '+diagZaehler.nachgeladen,
     'Fehlgeschlagene Pings:    '+diagZaehler.pingFehler,
+    'Fehler bei Nachschau:     '+syncFehler,
     'Tab-Wechsel:              '+diagZaehler.tabWechsel,
     '',
     '--- VERLAUF (neueste unten) ---'
@@ -3813,6 +3816,7 @@ let letztesLebenszeichen = Date.now();
 let heartbeatTimer = null;
 let reconnectLaeuft = false;
 let warnungSichtbar = false;
+let warnBannerTimer = null;   // verzoegert das rote Band
 let fehlgeschlagenePings = 0;
 let pingLaeuft = false;
 let nachReconnectNachladen = false;
@@ -3836,6 +3840,7 @@ function verbindungOk(){
   // Erst wenn die Verbindung 60s am Stueck haelt, faengt sie wieder von vorn an.
   clearTimeout(stabilTimer);
   stabilTimer = setTimeout(()=>{ reconnectVersuche = 0; }, 60000);
+  clearTimeout(warnBannerTimer);
   if(warnungSichtbar){
     warnungSichtbar = false;
     const b = document.getElementById('connWarnBanner');
@@ -3907,11 +3912,23 @@ async function verbindungVerloren(){
   }, warte);
 }
 
+// Das rote Band erscheint NICHT mehr bei jedem kurzen Wackler.
+// Es wird erst eingeblendet, wenn die Verbindung 60 Sekunden am Stueck
+// nicht zurueckkommt - also bei einem echten Ausfall, bei dem der Nutzer
+// wirklich etwas tun sollte. Kurze Aussetzer regelt der Chat still selbst
+// (Nachschau-Netz), und im Diagnose-Protokoll steht trotzdem alles drin.
 function zeigeVerbindungsWarnung(){
   if(warnungSichtbar) return;
   warnungSichtbar = true;
-  const b = document.getElementById('connWarnBanner');
-  if(b) b.style.display = 'block';
+  diag('🔕 Verbindungsproblem (Warnung bleibt vorerst unsichtbar)');
+  clearTimeout(warnBannerTimer);
+  warnBannerTimer = setTimeout(()=>{
+    // Nur zeigen, wenn es dann IMMER NOCH nicht wieder geht
+    if(!warnungSichtbar || !currentUser) return;
+    const b = document.getElementById('connWarnBanner');
+    if(b) b.style.display = 'block';
+    diag('🔴 Rotes Band eingeblendet (Verbindung seit 60s weg)');
+  }, 60000);
 }
 
 // ===== LÜCKEN-FÜLLER (NACHRICHTEN-SYNC) =====
@@ -3923,13 +3940,14 @@ function zeigeVerbindungsWarnung(){
 let letzteBekannteMsgZeit = null;   // Zeitstempel der neuesten bekannten Nachricht (Server-Zeit)
 let syncLaeuft = false;
 let syncStart = 0;
+let syncFehler = 0;
 let echtVerpassteSyncs = 0;         // zählt Sync-Runden mit wirklich verpassten Nachrichten
 
 function merkeMsgZeit(t){
   if(t && (!letzteBekannteMsgZeit || t > letzteBekannteMsgZeit)) letzteBekannteMsgZeit = t;
 }
 
-async function nachrichtenSync(){
+async function nachrichtenSync(vollabgleich){
   if(!currentUser) return;
   // SCHUTZ GEGEN DAUERBLOCKADE: Wenn eine Abfrage im Browser "hängen"
   // bleibt, blieb syncLaeuft früher für immer auf true - der Lücken-Füller
@@ -3946,7 +3964,10 @@ async function nachrichtenSync(){
     // Vorher waren es 90s - kam eine Nachricht spaeter an oder gingen die Uhren
     // leicht auseinander, fiel sie aus dem Fenster und war fuer immer weg.
     let ab = SESSION_START;
-    if(letzteBekannteMsgZeit){
+    // VOLLABGLEICH: komplett ohne Zeitfenster-Logik einfach alles seit dem
+    // Login vergleichen. Das faengt auch Faelle ab, in denen die Zeitrechnung
+    // danebenliegt - die einzige echte Garantie, dass nichts fehlt.
+    if(!vollabgleich && letzteBekannteMsgZeit){
       const mitPuffer = new Date(new Date(letzteBekannteMsgZeit).getTime() - 600000).toISOString();
       if(mitPuffer > SESSION_START) ab = mitPuffer;
     }
@@ -3958,8 +3979,17 @@ async function nachrichtenSync(){
       // nicht vote". Vorher hat das Nachschau-Netz nie Text gefunden.
       .or('media_type.is.null,media_type.neq.vote')
       .eq('room', currentRoom||'hauptchat')
-      .order('created_at',{ascending:true}).limit(100), 15000);
-    if(error || !data){ syncLaeuft = false; return; }
+      .order('created_at',{ascending:true}).limit(vollabgleich?300:100), 15000);
+    if(error || !data){
+      // Vorher war das voellig stumm - im Bericht sah alles gut aus,
+      // obwohl das Nachschau-Netz gar nichts abfragen konnte.
+      syncFehler++;
+      if(syncFehler === 1 || syncFehler % 10 === 0){
+        diag('⛔ Nachschau-Abfrage fehlgeschlagen ('+syncFehler+'x): '+((error && error.message) || 'keine Daten'));
+      }
+      syncLaeuft = false; return;
+    }
+    if(syncFehler > 0){ diag('✅ Nachschau-Abfrage geht wieder (nach '+syncFehler+' Fehlversuchen)'); syncFehler = 0; }
     const area = document.getElementById('messagesArea');
     if(!area){ syncLaeuft = false; return; }
     let neu = 0, echtVerpasst = 0;
@@ -4005,7 +4035,12 @@ async function nachrichtenSync(){
     } else {
       echtVerpassteSyncs = 0;
     }
-  }catch(e){}
+  }catch(e){
+    syncFehler++;
+    if(syncFehler === 1 || syncFehler % 10 === 0){
+      diag('⛔ Nachschau abgebrochen ('+syncFehler+'x): '+(e && e.message ? e.message : e));
+    }
+  }
   syncLaeuft = false;
 }
 
@@ -4027,9 +4062,10 @@ function startHeartbeat(){
     if(!currentUser) return;
     syncTakt++;
     // IMMER alle 5s nachschauen - auch im Hintergrund-Tab.
-    // Die Abfrage ist winzig, aber sie ist die einzige echte Garantie,
-    // dass keine Nachricht bei jemandem fehlt.
-    nachrichtenSync();
+    // Zusaetzlich alle 30s ein VOLLABGLEICH ohne Zeitfenster: dabei wird der
+    // gesamte Verlauf seit dem Login verglichen. Selbst wenn die normale
+    // Nachschau etwas uebersieht, wird es spaetestens hier gefunden.
+    nachrichtenSync(syncTakt % 6 === 0);
   }, 5000);
   // Alle 20 Sekunden EIN aktiver Ping.
   // (Vorher: alle 3s bei Stille - das hat den Server unnötig geflutet
