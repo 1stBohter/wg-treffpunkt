@@ -3942,10 +3942,12 @@ async function nachrichtenSync(){
   syncLaeuft = true;
   syncStart = Date.now();
   try{
-    // Ab wann suchen? Ab der neuesten bekannten Nachricht, mit 90s Sicherheitspuffer
+    // Ab wann suchen? Ab der neuesten bekannten Nachricht, mit 10 MINUTEN Puffer.
+    // Vorher waren es 90s - kam eine Nachricht spaeter an oder gingen die Uhren
+    // leicht auseinander, fiel sie aus dem Fenster und war fuer immer weg.
     let ab = SESSION_START;
     if(letzteBekannteMsgZeit){
-      const mitPuffer = new Date(new Date(letzteBekannteMsgZeit).getTime() - 90000).toISOString();
+      const mitPuffer = new Date(new Date(letzteBekannteMsgZeit).getTime() - 600000).toISOString();
       if(mitPuffer > SESSION_START) ab = mitPuffer;
     }
     const {data,error} = await mitZeitlimit(sb.from('messages').select('*')
@@ -4020,16 +4022,10 @@ function startHeartbeat(){
   nachrichtenSyncTimer = setInterval(()=>{
     if(!currentUser) return;
     syncTakt++;
-    const echtzeitKaputt = reconnectLaeuft || reconnectVersuche > 0;
-    if(echtzeitKaputt){
-      nachrichtenSync();          // alle 5s - Notbetrieb
-      return;
-    }
-    if(document.hidden){
-      if(syncTakt % 6 === 0) nachrichtenSync();   // Hintergrund: alle 30s
-      return;
-    }
-    if(syncTakt % 2 === 0) nachrichtenSync();     // normal: alle 10s
+    // IMMER alle 5s nachschauen - auch im Hintergrund-Tab.
+    // Die Abfrage ist winzig, aber sie ist die einzige echte Garantie,
+    // dass keine Nachricht bei jemandem fehlt.
+    nachrichtenSync();
   }, 5000);
   // Alle 20 Sekunden EIN aktiver Ping.
   // (Vorher: alle 3s bei Stille - das hat den Server unnötig geflutet
@@ -4053,6 +4049,10 @@ function startHeartbeat(){
       console.log('Heartbeat: Ping fehlgeschlagen ('+fehlgeschlagenePings+'x)');
       // Erst beim ZWEITEN Fehlschlag in Folge reagieren -
       // ein einzelner kann ein harmloser Mini-Aussetzer sein.
+      // Im Hintergrund-Tab friert der Browser alles ein - ein stiller Ping
+      // heisst dort NICHT, dass die Verbindung weg ist. Geprueft wird beim
+      // Zurueckkommen; das Nachschau-Netz laeuft ohnehin weiter.
+      if(document.hidden) return;
       if(fehlgeschlagenePings >= 2){
         zeigeVerbindungsWarnung();
         verbindungVerloren();
@@ -4076,10 +4076,24 @@ document.addEventListener('visibilitychange', async ()=>{
     verbindungOk();
     verpassteNachrichtenNachladen();
   } else {
-    fehlgeschlagenePings = 2;
-    diag('📡 Ping nach Tab-Rückkehr fehlgeschlagen');
-    zeigeVerbindungsWarnung();
-    verbindungVerloren();
+    // Zweite Chance: der Tab war gerade eingefroren, der erste Ping geht
+    // deshalb oft ins Leere. Erst wenn auch der zweite scheitert, ist wirklich
+    // etwas kaputt. (Hat vorher unnoetige Neuaufbauten ausgeloest.)
+    diag('📡 Ping nach Tab-Rückkehr fehlgeschlagen – zweiter Versuch');
+    await new Promise(r=>setTimeout(r, 2500));
+    if(!currentUser || reconnectLaeuft) return;
+    pingLaeuft = true;
+    const nochmal = await pingVerbindung();
+    pingLaeuft = false;
+    if(nochmal){
+      verbindungOk();
+      verpassteNachrichtenNachladen();
+    } else {
+      fehlgeschlagenePings = 2;
+      diag('📡 Auch zweiter Ping ohne Antwort -> Neuaufbau');
+      zeigeVerbindungsWarnung();
+      verbindungVerloren();
+    }
   }
 });
 
