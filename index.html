@@ -3581,6 +3581,9 @@ async function loadMessages(){
 
 function subscribeMessages(){
   const channel = sb.channel('wg-treffpunkt-room');
+  // Diesen Kanal sofort als den aktuellen merken. Alte Kanaele melden sich
+  // beim Schliessen noch einmal - solche Meldungen werden unten ignoriert.
+  subscription = channel;
   
   // Presence für Online-User
   channel.on('presence',{event:'sync'},()=>{
@@ -3660,11 +3663,9 @@ function subscribeMessages(){
   });
 
   channel.subscribe(async(status)=>{
-    if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
-      console.log('Verbindung unterbrochen ('+status+'), reconnect...');
-      verbindungVerloren();
-      return;
-    }
+    // Meldungen von ALTEN, bereits ersetzten Kanaelen ignorieren.
+    // Ein geschlossener Kanal meldet sich noch einmal - das ist KEIN Abbruch.
+    if(subscription !== channel) return;
     if(status==='SUBSCRIBED'){
       // Verbindung steht wieder - Warnung weg, Heartbeat zuruecksetzen
       if(reconnectLaeuft || warnungSichtbar){
@@ -3714,17 +3715,16 @@ function subscribeMessages(){
         }
       },1500);
     }
-    // NEU: Supabase meldet aktiv einen Fehler -> sofort reagieren,
-    // statt 20-40s zu warten bis der Wächter es merkt.
-    if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){
+    // Supabase meldet einen echten Fehler -> sofort reagieren.
+    // "CLOSED" gehoert bewusst NICHT dazu: das loesen wir beim Neuaufbau
+    // selbst aus, und es als Abbruch zu werten erzeugte eine Endlosschleife.
+    if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
       diag('🔌 Supabase meldet: '+status);
       if(currentUser && !reconnectLaeuft){
         verbindungVerloren();
       }
     }
   });
-
-  subscription = channel;
 }
 
 // ===== DIAGNOSE-PROTOKOLL =====
@@ -3830,8 +3830,12 @@ function verbindungOk(){
   letztesLebenszeichen = Date.now();
   fehlgeschlagenePings = 0;
   reconnectLaeuft = false;
-  reconnectVersuche = 0;   // Wartezeit wieder auf Anfang
   clearTimeout(reconnectWatchdog);
+  // Wartezeit NICHT sofort zuruecksetzen: bei einer flatternden Verbindung
+  // (verbinden -> 2s spaeter weg -> verbinden ...) blieb sie sonst ewig bei 2s.
+  // Erst wenn die Verbindung 60s am Stueck haelt, faengt sie wieder von vorn an.
+  clearTimeout(stabilTimer);
+  stabilTimer = setTimeout(()=>{ reconnectVersuche = 0; }, 60000);
   if(warnungSichtbar){
     warnungSichtbar = false;
     const b = document.getElementById('connWarnBanner');
@@ -3864,6 +3868,7 @@ function mitZeitlimit(versprechen, ms){
 }
 
 let reconnectVersuche = 0;
+let stabilTimer = null;   // Wartezeit erst zuruecksetzen wenn die Verbindung wirklich haelt
 
 async function verbindungVerloren(){
   // Nur reconnecten wenn nicht eh schon laeuft
