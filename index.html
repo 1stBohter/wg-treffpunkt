@@ -3562,7 +3562,7 @@ async function loadMessages(){
 
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
-    .neq('media_type','vote')
+    .or('media_type.is.null,media_type.neq.vote')
     .eq('room', currentRoom)
     .order('created_at',{ascending:true}).limit(500);
   if(error){ console.log('DB:',error.message);return; }
@@ -3952,7 +3952,11 @@ async function nachrichtenSync(){
     }
     const {data,error} = await mitZeitlimit(sb.from('messages').select('*')
       .gte('created_at', ab)
-      .neq('media_type','vote')
+      // WICHTIG: "media_type ist nicht vote" schliesst in der Datenbank auch
+      // alle Zeilen aus, bei denen media_type LEER ist - und das sind genau
+      // die normalen TEXTnachrichten. Deshalb hier ausdruecklich "leer ODER
+      // nicht vote". Vorher hat das Nachschau-Netz nie Text gefunden.
+      .or('media_type.is.null,media_type.neq.vote')
       .eq('room', currentRoom||'hauptchat')
       .order('created_at',{ascending:true}).limit(100), 15000);
     if(error || !data){ syncLaeuft = false; return; }
