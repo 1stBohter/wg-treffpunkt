@@ -1140,7 +1140,11 @@
 const SUPABASE_URL = 'https://agwhtutxyfeatguquvrh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_YzSPbskpvdxdPP0lxENI9w_KZqaBIDW';
 const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+// realtime.worker: Der "Herzschlag" der Verbindung laeuft in einem eigenen
+// Hintergrund-Helfer. Browser bremsen Tabs im Hintergrund stark aus - dann
+// kam der Herzschlag zu spaet und Supabase hat die Verbindung gekappt.
+// Wichtig fuer alle, die mehrere Tabs gleichzeitig offen haben.
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { worker: true } });
 
 // ===== AVATARS =====
 const AVATAR_CATS = {
@@ -3564,15 +3568,17 @@ async function loadMessages(){
     .gte('created_at', SESSION_START)
     .or('media_type.is.null,media_type.neq.vote')
     .eq('room', currentRoom)
-    .order('created_at',{ascending:true}).limit(500);
+    .order('created_at',{ascending:false}).limit(500);   // NEUESTE 500 (vorher: aelteste 500)
   if(error){ console.log('DB:',error.message);return; }
+  if(data) data.reverse();   // wieder alt -> neu
   const area=document.getElementById('messagesArea');
   area.innerHTML='<div class="welcome-msg" id="welcomeMsg"><h3>👋 Willkommen im WG-Treffpunkt!</h3><p>Sei der Erste der schreibt – oder warte auf andere.</p></div>';
   if(data&&data.length>0){
     document.getElementById('welcomeMsg')?.remove();
     data.forEach(m=>{
       if(m.created_at) merkeMsgZeit(m.created_at);
-      const el=renderMsg(m);
+      let el=null;
+      try{ el=renderMsg(m); }catch(e){ console.log('Anzeige-Fehler', m.id, e); }
       if(el) area.appendChild(el);
     });
     area.scrollTop=area.scrollHeight;
@@ -3647,7 +3653,8 @@ function subscribeMessages(){
     if((msg.room||'hauptchat') !== currentRoom) return;
     // Duplikat-Schutz: Nachricht schon angezeigt? (z.B. eigene, sofort gerenderte)
     if(msg.id && document.querySelector('[data-msg-id="'+msg.id+'"]')) return;
-    const el=renderMsg(msg);
+    let el=null;
+    try{ el=renderMsg(msg); }catch(e){ diag('⚠️ Nachricht '+msg.id+' ließ sich nicht anzeigen: '+(e&&e.message)); return; }
     if(!el) return;
     document.getElementById('welcomeMsg')?.remove();
     area.appendChild(el);
@@ -3731,7 +3738,7 @@ function subscribeMessages(){
 // Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
 // (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
 // anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
-const CHAT_VERSION = '2026-09-23-b';   // steht im Diagnosebericht
+const CHAT_VERSION = '2026-09-24-a';   // steht im Diagnosebericht
 const diagnoseLog = [];
 const DIAG_START = new Date();
 let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
@@ -3873,6 +3880,7 @@ function mitZeitlimit(versprechen, ms){
 }
 
 let reconnectVersuche = 0;
+let reconnectTimer = null;  // geplanter Neuaufbau - damit nie zwei gleichzeitig laufen
 let stabilTimer = null;   // Wartezeit erst zuruecksetzen wenn die Verbindung wirklich haelt
 
 async function verbindungVerloren(){
@@ -3889,7 +3897,8 @@ async function verbindungVerloren(){
   const warte = Math.min(2000 * Math.pow(1.7, reconnectVersuche-1), 60000);
   diag('⚠️ Verbindung verloren -> Neuaufbau in '+Math.round(warte/1000)+'s (Versuch '+reconnectVersuche+')');
   clearTimeout(reconnectWatchdog);
-  setTimeout(async ()=>{
+  clearTimeout(reconnectTimer);   // evtl. schon geplanten Neuaufbau verwerfen
+  reconnectTimer = setTimeout(async ()=>{
     if(!currentUser){ reconnectLaeuft=false; return; }
     // WICHTIG: alten Kanal richtig ENTFERNEN, nicht nur abmelden.
     // Vorher blieb der alte Kanal beim gleichen Namen liegen und hat den
@@ -3979,7 +3988,10 @@ async function nachrichtenSync(vollabgleich){
       // nicht vote". Vorher hat das Nachschau-Netz nie Text gefunden.
       .or('media_type.is.null,media_type.neq.vote')
       .eq('room', currentRoom||'hauptchat')
-      .order('created_at',{ascending:true}).limit(vollabgleich?300:100), 15000);
+      // WICHTIG: NEUESTE zuerst holen (absteigend) und danach umdrehen.
+      // Vorher wurden die AELTESTEN geholt - bei mehr als 100 bzw. 300
+      // Nachrichten fielen genau die neuesten (die verpassten!) hinten raus.
+      .order('created_at',{ascending:false}).limit(vollabgleich?300:200), 15000);
     if(error || !data){
       // Vorher war das voellig stumm - im Bericht sah alles gut aus,
       // obwohl das Nachschau-Netz gar nichts abfragen konnte.
@@ -3989,6 +4001,7 @@ async function nachrichtenSync(vollabgleich){
       }
       syncLaeuft = false; return;
     }
+    data.reverse();   // wieder in zeitliche Reihenfolge bringen (alt -> neu)
     if(syncFehler > 0){ diag('✅ Nachschau-Abfrage geht wieder (nach '+syncFehler+' Fehlversuchen)'); syncFehler = 0; }
     const area = document.getElementById('messagesArea');
     if(!area){ syncLaeuft = false; return; }
@@ -3996,7 +4009,10 @@ async function nachrichtenSync(vollabgleich){
     data.forEach(m=>{
       merkeMsgZeit(m.created_at);
       if(m.id && document.querySelector('[data-msg-id="'+m.id+'"]')) return;
-      const el = renderMsg(m);
+      // Absicherung: wirft EINE Nachricht beim Anzeigen einen Fehler, lief
+      // vorher die ganze Runde ins Leere - alle Nachrichten danach fehlten.
+      let el = null;
+      try{ el = renderMsg(m); }catch(e){ diag('⚠️ Nachricht '+m.id+' ließ sich nicht anzeigen: '+(e&&e.message)); return; }
       if(!el) return;
       // An der richtigen Stelle einfügen (nach Nachrichten-ID sortiert),
       // damit nachgeholte Nachrichten nicht unten "falsch" landen
@@ -4608,7 +4624,8 @@ async function handleCommand(content){
       user_id: currentUser.id, user_name: currentUser.name,
       is_guest: currentUser.isGuest,
       color_index: currentUser.isGuest ? null : (currentUser.colorIndex ?? 0),
-      avatar: currentUser.avatar || null
+      avatar: currentUser.avatar || null,
+      room: currentRoom||'hauptchat'   // fehlte -> Nachschau konnte Wuerfe nie nachladen
     });
     return true;
   }
@@ -4824,7 +4841,7 @@ function showGifs(results){
 }
 async function sendGif(url){
   document.getElementById('emojiPanel').classList.remove('open');
-  await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,photo_url:currentUser.photoUrl||null,media_url:url,media_type:'image/gif'});
+  await sb.from('messages').insert({content:null,user_id:currentUser.id,user_name:currentUser.name,is_guest:currentUser.isGuest,color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),avatar:currentUser.avatar||null,photo_url:currentUser.photoUrl||null,media_url:url,media_type:'image/gif',room:currentRoom||'hauptchat'});
 }
 
 // VOTING
@@ -4859,7 +4876,8 @@ async function startVote(){
     is_guest:currentUser.isGuest,
     color_index:currentUser.isGuest?null:(currentUser.colorIndex??0),
     avatar:currentUser.avatar||null,
-    media_url:null, media_type:'vote'
+    media_url:null, media_type:'vote',
+    room: currentRoom||'hauptchat'
   }).select().single();
   if(!error && data) closeVoteModal();
   else closeVoteModal();
