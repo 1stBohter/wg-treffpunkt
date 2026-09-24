@@ -2953,18 +2953,26 @@ function getMeinePresence(typing){
   };
 }
 
+// "schreibt gerade..." laeuft jetzt ueber BROADCAST statt Presence.
+// Presence ist bei Supabase auf 5 Meldungen pro 30s begrenzt - beim Tippen
+// wurde das ueberschritten und der ganze Kanal (auch Nachrichten!) geschlossen.
+function sendeTippSignal(tippt){
+  try{
+    if(!subscription || !currentUser || subscription.state !== 'joined') return;
+    subscription.send({type:'broadcast', event:'typing',
+      payload:{ name: currentUser.name, room: currentRoom||'hauptchat', typing: !!tippt }});
+  }catch(e){}
+}
+
 function sendeTipptStatus(){
   if(!subscription || !currentUser) return;
   const jetzt = Date.now();
-  // Max alle 2 Sekunden senden
-  if(jetzt - lastTypingSent > 2000){
+  // Max alle 3 Sekunden senden. Ein "fertig"-Signal braucht es nicht:
+  // die Anzeige verschwindet nach 5s von selbst, beim Absenden sofort.
+  if(jetzt - lastTypingSent > 3000){
     lastTypingSent = jetzt;
-    subscription.track(getMeinePresence(true));
+    sendeTippSignal(true);
   }
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(()=>{
-    if(subscription && currentUser) subscription.track(getMeinePresence(false));
-  }, 3000);
 }
 
 // Wer tippt gerade: name -> Zeitstempel der letzten Tipp-Meldung
@@ -2988,7 +2996,7 @@ function aktualisiereTippAnzeige(){
   const jetzt = Date.now();
   // Failsafe: Einträge älter als 4 Sekunden automatisch entfernen
   Object.keys(tippendeUser).forEach(name => {
-    if(jetzt - tippendeUser[name] > 4000) delete tippendeUser[name];
+    if(jetzt - tippendeUser[name] > 5000) delete tippendeUser[name];
   });
   const namen = Object.keys(tippendeUser);
   const el = document.getElementById('typingIndicator');
@@ -3566,7 +3574,8 @@ async function loadMessages(){
 
   const {data,error}=await sb.from('messages').select('*')
     .gte('created_at', SESSION_START)
-    .or('media_type.is.null,media_type.neq.vote')
+    // Abstimmungen gehoeren dazu (wurden vorher ausgeschlossen -> nach
+    // Raumwechsel/Reconnect waren sie weg)
     .eq('room', currentRoom)
     .order('created_at',{ascending:false}).limit(500);   // NEUESTE 500 (vorher: aelteste 500)
   if(error){ console.log('DB:',error.message);return; }
@@ -3597,7 +3606,17 @@ function subscribeMessages(){
     const state=channel.presenceState();
     const users=Object.values(state).flat();
     renderOnlineUsers(users);
-    zeigeTippende(users);
+  });
+  // "schreibt gerade..." der anderen (Broadcast, siehe sendeTippSignal)
+  channel.on('broadcast',{event:'typing'},({payload})=>{
+    if(!payload || !payload.name || !currentUser) return;
+    if(payload.name === currentUser.name) return;
+    if(payload.typing && (payload.room||'hauptchat') === (currentRoom||'hauptchat')){
+      tippendeUser[payload.name] = Date.now();
+    } else {
+      delete tippendeUser[payload.name];
+    }
+    aktualisiereTippAnzeige();
   });
   channel.on('presence',{event:'join'},()=>lebenszeichen());
   channel.on('presence',{event:'leave'},()=>lebenszeichen());
@@ -3738,7 +3757,7 @@ function subscribeMessages(){
 // Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
 // (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
 // anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
-const CHAT_VERSION = '2026-09-24-a';   // steht im Diagnosebericht
+const CHAT_VERSION = '2026-09-24-b';   // steht im Diagnosebericht
 const diagnoseLog = [];
 const DIAG_START = new Date();
 let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
@@ -3860,11 +3879,11 @@ function verbindungOk(){
 async function pingVerbindung(){
   if(!subscription || !currentUser) return false;
   try{
-    // Falls gerade getippt wird, den Tipp-Status nicht versehentlich löschen
-    const tipptGerade = (Date.now() - lastTypingSent) < 3000;
-    // Zeitlimit: ohne das kann der Ping im Firefox ewig offen bleiben
-    const antwort = await mitZeitlimit(subscription.track(getMeinePresence(tipptGerade)), 8000);
-    return antwort === 'ok';
+    // WICHTIG: KEIN track() mehr! Supabase erlaubt pro Tab nur 5 Presence-
+    // Meldungen in 30 Sekunden. Ping + "schreibt gerade" lagen darueber ->
+    // Supabase hat den Kanal zugemacht, Nachrichten kamen nicht mehr an.
+    // Jetzt nur noch nachsehen, ob Leitung + Kanal stehen (kostet nichts).
+    return sb.realtime.isConnected() && subscription.state === 'joined';
   }catch(e){
     return false;
   }
@@ -3986,7 +4005,8 @@ async function nachrichtenSync(vollabgleich){
       // alle Zeilen aus, bei denen media_type LEER ist - und das sind genau
       // die normalen TEXTnachrichten. Deshalb hier ausdruecklich "leer ODER
       // nicht vote". Vorher hat das Nachschau-Netz nie Text gefunden.
-      .or('media_type.is.null,media_type.neq.vote')
+      // Abstimmungen werden jetzt AUCH nachgeladen (vorher ausgeschlossen -
+      // wer die Echtzeit-Meldung verpasst hat, bekam die Umfrage nie zu sehen).
       .eq('room', currentRoom||'hauptchat')
       // WICHTIG: NEUESTE zuerst holen (absteigend) und danach umdrehen.
       // Vorher wurden die AELTESTEN geholt - bei mehr als 100 bzw. 300
@@ -4050,6 +4070,14 @@ async function nachrichtenSync(vollabgleich){
       }
     } else {
       echtVerpassteSyncs = 0;
+    }
+    // Beim Vollabgleich auch die Stimmen der sichtbaren Abstimmungen auffrischen
+    // (falls einzelne Stimmen per Echtzeit verloren gingen)
+    if(vollabgleich){
+      // nur die letzten 3 Abstimmungen, damit es die Datenbank nicht belastet
+      Array.from(document.querySelectorAll('[data-poll-id]')).slice(-3).forEach(k=>{
+        try{ refreshVoteCard(k.getAttribute('data-poll-id')); }catch(e){}
+      });
     }
   }catch(e){
     syncFehler++;
@@ -4275,8 +4303,8 @@ async function sendMessage(){
   const content=input.value.trim();
   // Tipp-Anzeige sofort beenden
   clearTimeout(typingTimeout);
+  if(Date.now() - lastTypingSent < 6000) sendeTippSignal(false);
   lastTypingSent = 0;
-  if(subscription && currentUser) subscription.track(getMeinePresence(false));
   // Admin-Befehle abfangen
   if(content.startsWith('/')){
     const handled = await handleCommand(content);
