@@ -2339,6 +2339,7 @@ async function logout(){
   // ALLE Kanäle sauber entfernen (auch Pinnwand, Knebel, Einstellungen).
   // Vorher blieben die liegen - beim erneuten Anmelden im selben Tab
   // entstanden dann doppelte Kanäle mit gleichem Namen, die sich blockierten.
+  if(subscription) selbstGeschlossen.add(subscription);   // Abmelden ist kein Abbruch
   try{ await mitZeitlimit(sb.removeAllChannels(), 5000); }catch(e){}
   subscription = null;
   if(!currentUser.isGuest) await sb.auth.signOut();
@@ -3727,7 +3728,7 @@ function subscribeMessages(){
           // Kanal RICHTIG entfernen, nicht nur abmelden - sonst blockiert der
           // Geisterkanal den nächsten Anmeldeversuch (mehrfach klicken müssen).
           try{ await mitZeitlimit(channel.untrack(), 3000); }catch(e){}
-          try{ await mitZeitlimit(sb.removeChannel(channel), 4000); }catch(e){}
+          try{ await kanalEntfernen(channel, 4000); }catch(e){}
           subscription = null;
           clearInterval(heartbeatTimer);
           clearInterval(nachrichtenSyncTimer);
@@ -3741,9 +3742,18 @@ function subscribeMessages(){
         }
       },1500);
     }
+    // Supabase hat den Kanal ZUGEMACHT (nicht wir) -> sofort neu verbinden.
+    // Seit Version 23-b wurde "CLOSED" komplett ignoriert. Das hat zwar das
+    // Flattern gestoppt, aber wer von Supabase rausgeworfen wurde, blieb ca.
+    // 1 Minute weg (verschwand aus der Online-Liste, bekam nichts mit).
+    // Jetzt: eigene Schliessungen ignorieren, fremde sofort beheben.
+    if(status==='CLOSED'){
+      if(selbstGeschlossen.has(channel)) return;
+      diag('🔌 Supabase hat den Kanal geschlossen -> Neuaufbau');
+      if(currentUser && !reconnectLaeuft) verbindungVerloren();
+      return;
+    }
     // Supabase meldet einen echten Fehler -> sofort reagieren.
-    // "CLOSED" gehoert bewusst NICHT dazu: das loesen wir beim Neuaufbau
-    // selbst aus, und es als Abbruch zu werten erzeugte eine Endlosschleife.
     if(status==='CHANNEL_ERROR' || status==='TIMED_OUT'){
       diag('🔌 Supabase meldet: '+status);
       if(currentUser && !reconnectLaeuft){
@@ -3757,7 +3767,7 @@ function subscribeMessages(){
 // Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
 // (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
 // anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
-const CHAT_VERSION = '2026-09-24-b';   // steht im Diagnosebericht
+const CHAT_VERSION = '2026-09-25-a';   // steht im Diagnosebericht
 const diagnoseLog = [];
 const DIAG_START = new Date();
 let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
@@ -3891,6 +3901,16 @@ async function pingVerbindung(){
 
 // Hilfsfunktion: bricht ein Warten ab, wenn der Server gar nicht antwortet.
 // Ohne das können Anfragen im Firefox ewig "hängen" und alles blockieren.
+// Kanaele, die WIR SELBST schliessen (Neuaufbau, Abmelden...). Deren
+// "geschlossen"-Meldung ist kein Abbruch. Schliesst dagegen SUPABASE den
+// Kanal, muss sofort neu verbunden werden.
+const selbstGeschlossen = new WeakSet();
+function kanalEntfernen(ch, ms){
+  if(!ch) return Promise.resolve();
+  selbstGeschlossen.add(ch);
+  return mitZeitlimit(sb.removeChannel(ch), ms||5000);
+}
+
 function mitZeitlimit(versprechen, ms){
   return Promise.race([
     versprechen,
@@ -3923,7 +3943,7 @@ async function verbindungVerloren(){
     // Vorher blieb der alte Kanal beim gleichen Namen liegen und hat den
     // neuen blockiert -> "SUBSCRIBED" kam nie an, Endlosschleife.
     try{
-      if(subscription) await mitZeitlimit(sb.removeChannel(subscription), 5000);
+      if(subscription) await kanalEntfernen(subscription, 5000);
     }catch(e){ diag('… alter Kanal ließ sich nicht sauber entfernen'); }
     subscription = null;
     if(!currentUser){ reconnectLaeuft=false; return; }
@@ -4136,13 +4156,15 @@ function startHeartbeat(){
       // Im Hintergrund-Tab friert der Browser alles ein - ein stiller Ping
       // heisst dort NICHT, dass die Verbindung weg ist. Geprueft wird beim
       // Zurueckkommen; das Nachschau-Netz laeuft ohnehin weiter.
-      if(document.hidden) return;
+      // Die Pruefung schaut jetzt nur noch nach dem Kanal-Zustand (kein
+      // Netzverkehr). "Kanal zu" ist darum auch im Hintergrund-Tab echt -
+      // vorher blieben Hintergrund-Tabs (Mehrfach-Tab-Nutzer!) einfach weg.
       if(fehlgeschlagenePings >= 2){
         zeigeVerbindungsWarnung();
         verbindungVerloren();
       }
     }
-  }, 20000);
+  }, 10000);
 }
 
 // Tab kommt aus dem Hintergrund zurück: sofort leise prüfen + Verpasstes nachladen.
@@ -4379,7 +4401,7 @@ async function manuellerReconnect(){
     // WICHTIG: Kanal richtig ENTFERNEN, nicht nur abmelden - sonst blockiert
     // der alte Kanal den neuen (gleicher Name) und es passiert gar nichts.
     if(subscription){
-      try { await mitZeitlimit(sb.removeChannel(subscription), 5000); } catch(e){}
+      try { await kanalEntfernen(subscription, 5000); } catch(e){}
       subscription = null;
     }
     reconnectVersuche = 0;
