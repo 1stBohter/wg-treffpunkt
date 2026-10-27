@@ -47,15 +47,75 @@
   #hilfeOverlay { overflow-y:auto; align-items:flex-start; padding:24px 0; }
   #hilfeOverlay .modal { max-height:none; }
 
+  /* ANMELDE-SEITE: 3 Spalten
+     links  = Name + Mitbewohner
+     Mitte  = Eingangsbild ("Schild") + wer gerade im Chat ist
+     rechts = Anmeldefeld (.modal-panel) */
+  #authOverlay {
+    --links-breite: clamp(240px,24%,360px);
+    --rechts-breite: clamp(320px,38%,460px);
+  }
+
   /* RESIDENTS PANEL (links) */
   .residents-panel {
     position:absolute;left:0;top:0;bottom:0;
-    width:clamp(280px,55%,680px);
-    display:flex;flex-direction:column;justify-content:flex-end;
+    width:var(--links-breite);
+    display:flex;flex-direction:column;justify-content:space-between;
     z-index:1;
     animation:fadeIn 0.6s ease;
+    overflow-y:auto;overflow-x:hidden;
+    background:linear-gradient(180deg,#0d0d16 0%,#0a0a0f 100%);
+    border-right:1px solid rgba(200,255,0,0.12);
+  }
+  .residents-panel .building-badge { position:static;margin:28px 28px 0; }
+  .residents-panel .building-badge-title { font-size:28px; }
+  .rn { white-space:nowrap; }
+  .rn:not(:last-child)::after { content:' •'; }   /* Leerzeichen ZWISCHEN den Namen erlaubt den Zeilenumbruch */
+
+  /* MITTE: Eingangsbild + Online-Vorschau */
+  .login-mitte {
+    position:absolute;top:0;bottom:0;
+    left:var(--links-breite);right:var(--rechts-breite);
+    display:flex;flex-direction:column;
+    z-index:1;animation:fadeIn 0.8s ease;
     overflow:hidden;
   }
+  .login-bild-box { position:relative;flex:1;min-height:0;overflow:hidden; }
+  .login-online {
+    flex-shrink:0;
+    padding:16px 32px 28px;
+    background:#0a0a0f;
+    border-top:1px solid rgba(200,255,0,0.10);
+    min-height:96px;
+  }
+  .login-online-titel {
+    font-family:'Syne',sans-serif;font-weight:800;font-size:11px;
+    text-transform:uppercase;letter-spacing:3px;color:var(--accent);
+    display:flex;align-items:center;gap:8px;margin-bottom:12px;
+  }
+  .login-online-punkt {
+    width:8px;height:8px;border-radius:50%;background:#22c55e;
+    box-shadow:0 0 8px #22c55e;animation:pulse 2s ease-in-out infinite;
+  }
+  .login-online-liste { display:flex;flex-wrap:wrap;gap:12px 14px; }
+  .login-online-user {
+    display:flex;flex-direction:column;align-items:center;gap:5px;width:64px;
+    animation:popIn 0.3s ease;
+  }
+  .login-online-av {
+    width:46px;height:46px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;overflow:hidden;
+    border:2px solid rgba(34,197,94,0.7);
+    box-shadow:0 0 10px rgba(34,197,94,0.35);
+    background:linear-gradient(135deg,#374151,#6b7280);
+  }
+  .login-online-av img { width:100%;height:100%;object-fit:cover; }
+  .login-online-name {
+    font-size:11px;font-weight:600;color:#fff;max-width:64px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;
+  }
+  .login-online-leer { font-size:13px;color:var(--text-muted); }
 
   /* Haus-Bild oben */
   .residents-building {
@@ -534,8 +594,13 @@
   .whisper-btn:hover { background:rgba(239,68,68,0.2);border-color:#ef4444; }
 
   /* RESPONSIVE */
+  @media(max-width:1000px){
+    .residents-panel { display:none; }
+    .login-mitte { left:0; }
+  }
   @media(max-width:700px){
     .residents-panel { display:none; }
+    .login-mitte { display:none; }
     .modal-panel { width:100%;border-left:none;padding:28px 20px; }
   }
 </style>
@@ -557,22 +622,28 @@
 
   <!-- MITBEWOHNER PANEL LINKS -->
   <div class="residents-panel">
-    <div class="residents-building" id="loginBg">
-      <div class="residents-bg-layer residents-bg-blur" id="loginBgBlur"></div>
-      <div class="residents-bg-layer residents-bg-sharp" id="loginBgSharp"></div>
-    </div>
     <div class="building-badge">
       <div class="building-badge-title">WG-Treffpunkt</div>
       <div class="building-badge-sub">WG-Projekt Köln</div>
     </div>
     <div class="residents-info">
       <div class="residents-title">Mitbewohner</div>
-      <div class="residents-names">
-        Dominik • Oleg • Raffi • Anton • Lucien • Mönch • Tjakre • Daniel • Dennis<br>
-        Malte • Rambo • Steffi • Mattes • Dustin • Yanni • Xhe • Fabio • Collin<br>
-        Emu • Diego • Linus • Hendrik • Larsi • Andre • Nico • Ben • Kati • Gabs<br>
-        Simon • Timo • Flo • Alex • Manu • Sebi • Pascal • Fabi • Lenor • Jan
+      <div class="residents-names"><span class="rn">Dominik</span> <span class="rn">Oleg</span> <span class="rn">Raffi</span> <span class="rn">Anton</span> <span class="rn">Lucien</span> <span class="rn">Mönch</span> <span class="rn">Tjakre</span> <span class="rn">Daniel</span> <span class="rn">Dennis</span> <span class="rn">Malte</span> <span class="rn">Rambo</span> <span class="rn">Steffi</span> <span class="rn">Mattes</span> <span class="rn">Dustin</span> <span class="rn">Yanni</span> <span class="rn">Xhe</span> <span class="rn">Fabio</span> <span class="rn">Collin</span> <span class="rn">Emu</span> <span class="rn">Diego</span> <span class="rn">Linus</span> <span class="rn">Hendrik</span> <span class="rn">Larsi</span> <span class="rn">Andre</span> <span class="rn">Nico</span> <span class="rn">Ben</span> <span class="rn">Kati</span> <span class="rn">Gabs</span> <span class="rn">Simon</span> <span class="rn">Timo</span> <span class="rn">Flo</span> <span class="rn">Alex</span> <span class="rn">Manu</span> <span class="rn">Fabi</span> <span class="rn">Lenor</span> <span class="rn">Jan</span> <span class="rn">Balto</span></div>
+    </div>
+  </div>
+
+  <!-- MITTE: Eingangsbild + wer gerade im Chat ist -->
+  <div class="login-mitte">
+    <div class="login-bild-box">
+      <!-- Gleiche IDs wie vorher -> Schild-Verwalter funktioniert unveraendert -->
+      <div class="residents-building" id="loginBg">
+        <div class="residents-bg-layer residents-bg-blur" id="loginBgBlur"></div>
+        <div class="residents-bg-layer residents-bg-sharp" id="loginBgSharp"></div>
       </div>
+    </div>
+    <div class="login-online">
+      <div class="login-online-titel"><span class="login-online-punkt"></span>Gerade im Chat <span id="loginVorschauZahl"></span></div>
+      <div class="login-online-liste" id="loginVorschauListe"><span class="login-online-leer">Schaue nach…</span></div>
     </div>
   </div>
 
@@ -2181,7 +2252,9 @@ function showLogin(){ s('guestView',0);s('loginView',1);s('registerView',0); }
 function showRegister(){ s('guestView',0);s('loginView',0);s('registerView',1); }
 function showGuest(){ s('guestView',1);s('loginView',0);s('registerView',0); }
 function s(id,show){ document.getElementById(id).style.display=show?'block':'none'; }
-function showError(id,msg){ const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000); }
+function showError(id,msg){ const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000);
+  // Anmeldung ist gescheitert -> man bleibt auf der Anmeldeseite -> Vorschau wieder an
+  if(!currentUser) loginVorschauFreigeben(); }
 
 // AUTH
 async function joinAsGuest(){
@@ -2193,6 +2266,7 @@ async function joinAsGuest(){
   // behindern sich gegenseitig (war eine Ursache fürs "mehrfach klicken müssen")
   if(joinBtn){joinBtn.disabled=true;joinBtn.textContent='⏳ Prüfe Name...';}
   const knopfFrei = ()=>{ if(joinBtn){joinBtn.disabled=false;joinBtn.textContent='💬 Als Gast beitreten';} };
+  await loginVorschauStoppen();   // Vorschau-Kanal muss weg sein, bevor der echte kommt
 
   try{
     // Regel 1: Ist der Name ein registrierter Member?
@@ -2250,6 +2324,7 @@ async function login(){
   const btn=document.querySelector('#loginView .btn-primary');
   if(btn){btn.disabled=true;btn.textContent='⏳ Anmelden...';}
   const knopfFrei = ()=>{ if(btn){btn.disabled=false;btn.textContent='Anmelden';} };
+  await loginVorschauStoppen();   // Vorschau-Kanal muss weg sein, bevor der echte kommt
   try{
     // Email anhand Chatname nachschlagen
     const {data:member,error:me}=await mitZeitlimit(sb.from('members').select('email').ilike('display_name',chatname).maybeSingle(), 10000);
@@ -2278,6 +2353,7 @@ async function register(){
   const pass=document.getElementById('regPassword').value;
   if(!name||!email||!pass) return showError('regError','Bitte alle Felder ausfüllen.');
   if(pass.length<6) return showError('regError','Passwort mindestens 6 Zeichen.');
+  await loginVorschauStoppen();   // Vorschau-Kanal muss weg sein, bevor der echte kommt
   const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name,color_index:selectedColor,avatar:selectedAvatar.e}}});
   if(error) return showError('regError','Fehler: '+error.message);
   currentUser={name,isGuest:false,id:data.user.id,colorIndex:selectedColor,avatar:selectedAvatar.e};
@@ -2346,6 +2422,7 @@ async function logout(){
   currentUser=null;
   document.getElementById('app').classList.remove('visible');
   document.getElementById('authOverlay').classList.remove('hidden');
+  loginVorschauFreigeben();
   document.getElementById('messagesArea').innerHTML='<div class="welcome-msg" id="welcomeMsg"><h3>👋 Willkommen im WG-Treffpunkt!</h3><p>Sei der Erste der schreibt – oder warte auf andere.</p></div>';
   showGuest();
 }
@@ -2865,6 +2942,7 @@ function sspZeigeErgebnis(wahlH, wahlG, herausforderer, gegner){
 let sspPollInterval = null;
 
 function subscribeSSP(){
+  clearInterval(sspPollInterval);   // nie doppelt laufen lassen
   // Alle 3 Sekunden prüfen ob eine Herausforderung oder ein Ergebnis da ist
   sspPollInterval = setInterval(async()=>{
     if(!currentUser) return;
@@ -3737,6 +3815,7 @@ function subscribeMessages(){
           currentUser=null;
           document.getElementById('app').classList.remove('visible');
           document.getElementById('authOverlay').classList.remove('hidden');
+          loginVorschauFreigeben();
           showGuest();
           setTimeout(()=>showError('guestError','❌ Name bereits vergeben! Bitte wähle einen anderen Namen.'),100);
         }
@@ -3767,7 +3846,7 @@ function subscribeMessages(){
 // Läuft IMMER leise im Hintergrund mit und merkt sich die letzten 200 Ereignisse
 // (Abbrüche, Neuaufbauten, nachgeladene Nachrichten...). Niemand muss etwas
 // anschalten oder drücken. Mit /diagnose kann man den Bericht ansehen + kopieren.
-const CHAT_VERSION = '2026-09-25-a';   // steht im Diagnosebericht
+const CHAT_VERSION = '2026-10-27-a';   // steht im Diagnosebericht
 const diagnoseLog = [];
 const DIAG_START = new Date();
 let diagZaehler = { abbrueche:0, neuaufbauten:0, nachgeladen:0, pingFehler:0, tabWechsel:0 };
@@ -5234,11 +5313,109 @@ function checkPrivacy(){
   }
 }
 
+// ===== ONLINE-VORSCHAU AUF DER ANMELDESEITE =====
+// Schaut alle 30s kurz in den Chat-Kanal, liest WER online ist (ohne sich
+// selbst anzumelden - man taucht also NICHT in der Online-Liste auf) und
+// schliesst den Kanal sofort wieder.
+// WICHTIG: Der Kanal heisst genauso wie der echte Chat-Kanal. Supabase gibt
+// bei gleichem Namen denselben Kanal zurueck - deshalb wird die Vorschau
+// beim Anmelden IMMER erst komplett beendet (loginVorschauStoppen).
+let vorschauAktiv = false, vorschauTimer = null, vorschauLaeuft = null;
+let vorschauGesperrt = false;   // waehrend eine Anmeldung laeuft: Finger weg!
+
+// Nach Abmelden oder fehlgeschlagener Anmeldung wieder erlauben
+function loginVorschauFreigeben(){
+  vorschauGesperrt = false;
+  setTimeout(loginVorschauStarten, 1500);
+}
+
+function loginVorschauStarten(){
+  if(currentUser || vorschauGesperrt) return;
+  vorschauAktiv = true;
+  clearInterval(vorschauTimer);
+  loginVorschauPeek();
+  vorschauTimer = setInterval(loginVorschauPeek, 30000);
+}
+
+async function loginVorschauStoppen(){
+  vorschauGesperrt = true;
+  vorschauAktiv = false;
+  clearInterval(vorschauTimer);
+  if(vorschauLaeuft){ try{ await vorschauLaeuft; }catch(e){} }
+}
+
+function loginVorschauPeek(){
+  if(!vorschauAktiv || vorschauGesperrt || currentUser || vorschauLaeuft) return;
+  if(document.getElementById('authOverlay').classList.contains('hidden')) return;
+  vorschauLaeuft = new Promise(resolve=>{
+    const ch = sb.channel('wg-treffpunkt-room');
+    let fertig = false;
+    const ende = async (liste)=>{
+      if(fertig) return; fertig = true;
+      clearTimeout(t);
+      try{ await kanalEntfernen(ch, 4000); }catch(e){}
+      if(liste && vorschauAktiv && !currentUser){ try{ zeigeLoginVorschau(liste); }catch(e){} }
+      resolve();
+    };
+    const t = setTimeout(()=>ende(null), 5000);
+    ch.on('presence',{event:'sync'},()=>{ ende(Object.values(ch.presenceState()||{}).flat()); });
+    ch.subscribe(status=>{ if(status==='CHANNEL_ERROR'||status==='TIMED_OUT') ende(null); });
+  }).finally(()=>{ vorschauLaeuft = null; });
+}
+
+function zeigeLoginVorschau(users){
+  const liste = document.getElementById('loginVorschauListe');
+  const zahl = document.getElementById('loginVorschauZahl');
+  if(!liste) return;
+  // Jeden Namen nur einmal (Mehrfach-Tabs!), feste Reihenfolge wie im Chat
+  const seen = new Set();
+  const unique = users.filter(u=>{
+    const k = (u.name||'').toLowerCase();
+    if(!k || seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+  const rang = u => SUPERADMINS.includes((u.name||'').toLowerCase()) ? 0 : (u.isAdmin ? 1 : 2);
+  unique.sort((a,b)=> (rang(a)-rang(b)) || (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase(),'de'));
+  if(zahl) zahl.textContent = unique.length ? '· '+unique.length : '';
+  liste.innerHTML = '';
+  if(unique.length === 0){
+    const leer = document.createElement('span');
+    leer.className = 'login-online-leer';
+    leer.textContent = 'Gerade ist niemand da – sei der Erste! 👋';
+    liste.appendChild(leer);
+    return;
+  }
+  unique.forEach(u=>{
+    const box = document.createElement('div');
+    box.className = 'login-online-user';
+    box.title = u.name + (u.away ? ' (💤 weg)' : '');
+    const av = document.createElement('div');
+    av.className = 'login-online-av';
+    const foto = (u.photoUrl && String(u.photoUrl).startsWith('https://')) ? u.photoUrl : null;
+    if(foto){
+      const img = document.createElement('img');
+      img.src = foto; img.alt = '';
+      av.appendChild(img);
+    } else {
+      av.textContent = (u.avatar && u.avatar !== '📷') ? u.avatar : '👤';
+      const th = (u.color!==null && u.color!==undefined) ? THEMES[u.color] : null;
+      if(th){ av.style.background = th.av; av.style.color = th.tx; }
+    }
+    if(u.away){ av.style.opacity = '0.5'; }
+    const nm = document.createElement('div');
+    nm.className = 'login-online-name';
+    nm.textContent = u.name;
+    box.appendChild(av); box.appendChild(nm);
+    liste.appendChild(box);
+  });
+}
+
 // SESSION - immer Login-Screen zeigen, kein Auto-Login
 window.addEventListener('load', async()=>{
   await sb.auth.signOut();
   loadBackground();
   checkPrivacy();
+  loginVorschauStarten();
 });
 
 // HINTERGRUND
